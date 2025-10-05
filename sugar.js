@@ -85,6 +85,8 @@
             vlcProtocol: 'vlc://'
         },
         targetApis: [
+            {match: '/h5/system/info', handler: handleSystemInfoApi},
+            {match: '/h5/movie/block', handler: handleMovieBlockApi},
             {match: '/h5/user/info', handler: handleUserInfoApi},
             {match: '/h5/movie/detail', handler: handleMovieDetailApi}
         ],
@@ -208,14 +210,14 @@
         } catch (e) {
             console.error(`[油猴1.0][浏览器播放] 唤起浏览器播放失败：${e.message}`);
         }
-        try {
-            const vlcUrl = CONFIG.player.vlcProtocol + encodeURIComponent(playLink);
-            // 可以添加更多参数，如是否激活新标签页
-            GM_openInTab(vlcUrl, {active: false});
-            console.log(`[油猴1.0][播放器] 尝试唤起VLC：${vlcUrl}（需提前关联vlc://协议）`);
-        } catch (e) {
-            console.error(`[油猴1.0][播放器] 唤起VLC失败：${e.message}`);
-        }
+        // try {
+        // const vlcUrl = CONFIG.player.vlcProtocol + encodeURIComponent(playLink);
+        //     // 可以添加更多参数，如是否激活新标签页
+        //     GM_openInTab(vlcUrl, {active: false});
+        //     console.log(`[油猴1.0][播放器] 尝试唤起VLC：${vlcUrl}（需提前关联vlc://协议）`);
+        // } catch (e) {
+        //     console.error(`[油猴1.0][播放器] 唤起VLC失败：${e.message}`);
+        // }
     }
 
 
@@ -225,9 +227,14 @@
             console.log('[油猴1.0][用户信息API] 开始处理');
             let userData = JSON.parse(decryptedStr);
 
+            if (userData?.data?.is_vip === 'n') {
+                userData.data.is_vip = 'y';
+                console.log('[油猴1.0][用户信息API] VIP状态：n → y');
+            }
+
             if (userData?.data?.is_dark_vip === 'n') {
                 userData.data.is_dark_vip = 'y';
-                console.log('[油猴1.0][用户信息API] VIP状态：n → y');
+                console.log('[油猴1.0][用户信息API] dark VIP状态：n → y');
             }
 
             if (userData?.data?.balance !== undefined) {
@@ -237,9 +244,81 @@
                 console.log('[油猴1.0][用户信息API] 余额：已设置为99999999');
             }
 
+            if (userData?.data?.group_end_time !== undefined) {
+                userData.data.group_end_time = '2999-09-09到期';
+                console.log('[油猴1.0][用户信息API] 到期时间：已设置为2999-09-09到期');
+            }
+            userData.data.post_banner = [];
+            userData.data.bottom_ads = [];
+            userData.data.bottom_ad = {};
+            userData.data.layer_ad = {};
+            userData.data.layer_ads = [];
+            userData.data.layer_app = [];
+            userData.data.ad = {};
+            userData.data.ads = [];
+            userData.data.notice = '';
+            userData.data.ad_auto_jump = 'n';
+            userData.data.site_url = '';
+            userData.data.dark_tips = '';
+
             return JSON.stringify(userData, null, 2);
         } catch (e) {
             console.error(`[油猴1.0][用户信息API处理失败] ${e.message}`);
+            return decryptedStr;
+        }
+    }
+
+    function handleSystemInfoApi(decryptedStr) {
+        try {
+            console.log('[油猴1.0][系统信息API] 开始处理');
+            let systemData = JSON.parse(decryptedStr);
+            systemData.data.post_banner = [];
+            systemData.data.bottom_ads = [];
+            systemData.data.bottom_ad = {};
+            systemData.data.layer_ad = {};
+            systemData.data.layer_ads = [];
+            systemData.data.layer_app = [];
+            systemData.data.ad = {};
+            systemData.data.ads = [];
+            systemData.data.notice = '';
+            systemData.data.ad_auto_jump = 'n';
+            systemData.data.ad_show_time = 0;
+            systemData.data.site_url = '';
+            systemData.data.dark_tips = '';
+
+            return JSON.stringify(systemData, null, 2);
+        } catch (e) {
+            console.error(`[油猴1.0][系统信息API处理失败] ${e.message}`);
+            return decryptedStr;
+        }
+    }
+
+    function handleMovieBlockApi(decryptedStr) {
+        try {
+            console.log('[油猴1.0][系统视频信息API] 开始处理');
+            let movieData = JSON.parse(decryptedStr);
+            movieData = {
+                ...movieData,
+                data: movieData.data.map(item => ({
+                    ...item,
+                    ad: [] // 设为空数组
+                }))
+            };
+            // movieData.data.bottom_ads = [];
+            // movieData.data.bottom_ad = {};
+            // movieData.data.layer_ad = {};
+            // movieData.data.layer_ads = [];
+            // movieData.data.layer_app = [];
+            // movieData.data.ad = {};
+            // movieData.data.ads = [];
+            // movieData.data.notice = '';
+            // movieData.data.ad_auto_jump = 'n';
+            // movieData.data.site_url = '';
+            // movieData.data.dark_tips = '';
+
+            return JSON.stringify(movieData, null, 2);
+        } catch (e) {
+            console.error(`[油猴1.0][系统视频信息API处理失败] ${e.message}`);
             return decryptedStr;
         }
     }
