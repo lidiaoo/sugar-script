@@ -88,7 +88,9 @@
             {match: '/h5/system/info', handler: handleSystemInfoApi},
             {match: '/h5/movie/block', handler: handleMovieBlockApi},
             {match: '/h5/user/info', handler: handleUserInfoApi},
-            {match: '/h5/movie/detail', handler: handleMovieDetailApi}
+            {match: '/h5/movie/detail', handler: handleMovieDetailApi},
+            {match: '/h5/movie/search', handler: handleMovieSearchApi},
+            {match: '/h5/danmaku/list', handler: handleDanmakuApi},
         ],
         script: {
             targetReg: /\/_nuxt\/[\w]+\.js$/,
@@ -179,7 +181,7 @@
                 // 校验播放链接
                 if (result?.playLink && typeof result.playLink === 'string' && result.playLink.startsWith('http')) {
                     console.log(`[油猴1.0][播放链接] 第${attempt}次尝试成功：${result.playLink}`);
-                    alert(`获取播放链接成功 ${result.playLink}`);
+                    // alert(`获取播放链接成功 ${result.playLink}`);
                     return result.playLink;
                 } else {
                     throw new Error(`无有效playLink（响应：${JSON.stringify(result, null, 2)}）`);
@@ -281,7 +283,7 @@
             systemData.data.ad = {};
             systemData.data.ads = [];
             systemData.data.notice = '';
-            systemData.data.ad_auto_jump = 'n';
+            systemData.data.ad_auto_jump = 'y';
             systemData.data.ad_show_time = 0;
             systemData.data.site_url = '';
             systemData.data.dark_tips = '';
@@ -304,17 +306,6 @@
                     ad: [] // 设为空数组
                 }))
             };
-            // movieData.data.bottom_ads = [];
-            // movieData.data.bottom_ad = {};
-            // movieData.data.layer_ad = {};
-            // movieData.data.layer_ads = [];
-            // movieData.data.layer_app = [];
-            // movieData.data.ad = {};
-            // movieData.data.ads = [];
-            // movieData.data.notice = '';
-            // movieData.data.ad_auto_jump = 'n';
-            // movieData.data.site_url = '';
-            // movieData.data.dark_tips = '';
 
             return JSON.stringify(movieData, null, 2);
         } catch (e) {
@@ -343,23 +334,74 @@
             if (movieData?.data?.lines && movieData.data.lines.length >= 2) {
                 const vipLine = movieData.data.lines[1];
                 if (vipLine?.link) {
+                    movieData.data.backup_link = vipLine.link;
                     movieData.data.play_link = vipLine.link;
                     console.log(`[油猴1.0][电影详情API] 播放线路：切换为VIP线路 → ${vipLine.link.slice(0, 50)}...`);
                 }
             }
 
+            movieData.data.ad = [];
+            movieData.data.ads = [];
+            movieData.data.ad_apps = [];
+            movieData.data.has_buy = 'y';
+            movieData.data.has_favorite = 'y';
+            movieData.data.has_follow = 'y';
+            movieData.data.has_love = 'y';
+            movieData.data.play_ads = [];
+            movieData.data.play_ad_auto_jump = 'y';
+            movieData.data.play_ad_show_time = 0;
+
+
             const videoId = movieData?.data?.id;
             if (videoId) {
                 const playLink = await getPlayLink(videoId);
                 if (playLink) {
+                    const startStr = "/h5/m3u8/link";
+                    const startIndex = playLink.indexOf(startStr);
+                    if (startIndex !== -1) {
+                        // 从startStr开始截取到结尾（包含后续所有内容）
+                        const subLink = playLink.slice(startIndex);
+                        console.log(subLink);
+                        // 输出: /h5/m3u8/link/567c5935bd1de50452f0d601a6ef634b.m3u8
+                        movieData.data.backup_link = subLink;
+                        movieData.data.play_link = subLink;
+                    }
                     openPlayers(playLink);
-                    movieData.data.play_link = playLink;
                 }
             }
 
             return JSON.stringify(movieData, null, 2);
         } catch (e) {
             console.error(`[油猴1.0][电影详情API处理失败] ${e.message}`);
+            return decryptedStr;
+        }
+    }
+
+
+    async function handleMovieSearchApi(decryptedStr) {
+        try {
+            console.log('[油猴1.0][电影搜索API] 开始处理');
+            let movieData = JSON.parse(decryptedStr);
+
+            movieData.data = movieData.data.filter(item => item.type != 'ad');
+
+            return JSON.stringify(movieData, null, 2);
+        } catch (e) {
+            console.error(`[油猴1.0][电影搜索API处理失败] ${e.message}`);
+            return decryptedStr;
+        }
+    }
+
+    async function handleDanmakuApi(decryptedStr) {
+        try {
+            console.log('[油猴1.0][电影danmakuAPI] 开始处理');
+            let movieData = JSON.parse(decryptedStr);
+
+            // movieData.data = [];
+
+            return JSON.stringify(movieData, null, 2);
+        } catch (e) {
+            console.error(`[油猴1.0][电影danmakuAPI处理失败] ${e.message}`);
             return decryptedStr;
         }
     }
