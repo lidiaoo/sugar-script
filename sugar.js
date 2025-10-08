@@ -70,7 +70,7 @@
         aes: {
             key: 'fd14f9f8e38808fa', mode: CryptoJS.mode.ECB, padding: CryptoJS.pad.Pkcs7
         }, playLinkApi: {
-            url: 'http://158.178.158.236:3988/parse', maxAttempts: 30, retryDelay: 1000, forceGM: true
+            url: '解析网址', maxAttempts: 30, retryDelay: 1000, forceGM: true
         }, player: {
             onlinePlayer: 'https://m3u8player.org/player.html?url=', vlcProtocol: 'vlc://'
         }, targetApis: [{match: '/h5/system/info', handler: handleSystemInfoApi}, {
