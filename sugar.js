@@ -420,56 +420,6 @@
     //     nativeSend.call(xhr, body);
     // };
 
-//    const code = `
-// (function(){
-//   const OriginalXHR = window.XMLHttpRequest;
-//   function ProxiedXHR() {
-//     const xhr = new OriginalXHR();
-//     const rawOpen = xhr.open;
-//     const rawSend = xhr.send;
-//     let method = '', url = '';
-
-//     xhr.open = function(m, u, ...args) {
-//       method = m; url = u;
-//       return rawOpen.apply(this, [m, u, ...args]);
-//     };
-
-//     xhr.send = function(body) {
-//       const rawState = this.onreadystatechange;
-//       this.onreadystatechange = function() {
-//         if (xhr.readyState === 4 && xhr.status === 200) {
-//           try {
-//             const rawText = xhr.responseText;
-
-//            const modifiedResponse = await routeApiHandler(xhr._url, rawText);
-//            console.log('===aaa',modifiedResponse)
-//             const obj   = JSON.parse(rawText);
-//             obj._hit    = true;                 // 这里随便改
-//             // 覆写只读属性
-//             Object.defineProperty(xhr, 'responseText', {
-//               value: JSON.stringify(obj), writable: false
-//             });
-//             Object.defineProperty(xhr, 'response', {
-//               value: obj, writable: false
-//             });
-//           } catch (_) {}
-//         }
-//         if (rawState) rawState.call(this);
-//       };
-//       return rawSend.call(this, body);
-//     };
-//     return xhr;
-//   }
-//   ProxiedXHR.prototype = OriginalXHR.prototype;
-//   window.XMLHttpRequest = ProxiedXHR;
-// })();
-// `;
-//   // 1. 创建<style>只是为了拿到最早插入时机，用<script>也行
-//   const script = document.createElement('script');
-//   script.textContent = code;
-//   // 2. 必须在第一次 JS 执行前就塞进去
-//   document.documentElement.insertBefore(script, document.documentElement.firstChild);
-
 
     /* **************  注入工具  ************** */
 
