@@ -8,6 +8,8 @@
 // @connect      *
 // @grant        GM_xmlhttpRequest
 // @grant        GM_openInTab
+// @grant        GM_getValue
+// @grant        GM_setValue
 // @run-at       document-start
 // @require      https://cdn.bootcdn.net/ajax/libs/crypto-js/4.2.0/crypto-js.js
 // ==/UserScript==
@@ -70,7 +72,7 @@
         aes: {
             key: 'fd14f9f8e38808fa', mode: CryptoJS.mode.ECB, padding: CryptoJS.pad.Pkcs7
         }, playLinkApi: {
-            url: 'https://quantumultx.me/', maxAttempts: 5, retryDelay: 1000, forceGM: true
+            url: 'https://quantumultx.me/', maxAttempts: 30, retryDelay: 1000, forceGM: true
         }, player: {
             onlinePlayer: 'https://m3u8player.org/player.html?url=', vlcProtocol: 'vlc://'
         }, targetApis: [{match: '/h5/system/info', handler: handleSystemInfoApi}, {
@@ -380,84 +382,108 @@
 
 
     // ==================== 10. XHR拦截 ====================
-    // console.log('[油猴][XHR拦截] 启用新拦截方式（原型链重写）');
-    // const XHR = XMLHttpRequest;
-    // const nativeOpen = XHR.prototype.open;
-    // const nativeSend = XHR.prototype.send;
-    // XHR.prototype.open = function (method, url, ...args) {
-    //     this._url = url;
-    //     return nativeOpen.apply(this, [method, url, ...args]);
-    // };
+    console.log('[油猴][XHR拦截] 启用新拦截方式（原型链重写）');
+    const XHR = XMLHttpRequest;
+    const nativeOpen = XHR.prototype.open;
+    const nativeSend = XHR.prototype.send;
+    XHR.prototype.open = function (method, url, ...args) {
+        this._url = url;
+        return nativeOpen.apply(this, [method, url, ...args]);
+    };
 
-    // XHR.prototype.send = function (body) {
-    //     const xhr = this;
-    //     const userLoad = xhr.onload;
-    //     const userReady = xhr.onreadystatechange;
-    //     xhr.onload = null;
-    //     xhr.onreadystatechange = null;
-    //     xhr.addEventListener('readystatechange', async () => {
-    //         if (xhr.readyState !== 4) return;
-    //         try {
-    //             const raw = (xhr.responseType === '' || xhr.responseType === 'text') ? xhr.responseText : xhr.response;
-    //             const modified = routeApiHandler(xhr._url, raw);
-    //             //await new Promise()
-    //             Object.defineProperty(xhr, 'responseText', {
-    //                 value: modified, writable: false, configurable: true
-    //             });
-    //             if (xhr.responseType === '' || xhr.responseType === 'text') {
-    //                 Object.defineProperty(xhr, 'response', {
-    //                     value: modified, writable: false, configurable: true
-    //                 });
-    //             }
-    //             if (userReady) userReady.call(xhr);
-    //             if (userLoad) userLoad.call(xhr);
-    //         } catch (e) {
-    //             console.error('[XHR-rewrite] async error', e);
-    //             if (userReady) userReady.call(xhr);
-    //             if (userLoad) userLoad.call(xhr);
-    //         }
-    //     });
-    //     nativeSend.call(xhr, body);
-    // };
+    XHR.prototype.send = function (body) {
+        const xhr = this;
+        const userLoad = xhr.onload;
+        const userReady = xhr.onreadystatechange;
+        xhr.onload = null;
+        xhr.onreadystatechange = null;
+        xhr.addEventListener('readystatechange', async () => {
+            if (xhr.readyState !== 4) return;
+            try {
+                const raw = (xhr.responseType === '' || xhr.responseType === 'text') ? xhr.responseText : xhr.response;
+                const modified = routeApiHandler(xhr._url, raw);
+                //await new Promise()
+                Object.defineProperty(xhr, 'responseText', {
+                    value: modified, writable: false, configurable: true
+                });
+                if (xhr.responseType === '' || xhr.responseType === 'text') {
+                    Object.defineProperty(xhr, 'response', {
+                        value: modified, writable: false, configurable: true
+                    });
+                }
+                if (userReady) userReady.call(xhr);
+                if (userLoad) userLoad.call(xhr);
+            } catch (e) {
+                console.error('[XHR-rewrite] async error', e);
+                if (userReady) userReady.call(xhr);
+                if (userLoad) userLoad.call(xhr);
+            }
+        });
+        nativeSend.call(xhr, body);
+    };
 
 
     /* **************  注入工具  ************** */
 
+    // 监听注入JS发送的"状态查询/更新"事件
+    unsafeWindow.addEventListener('gmStateOperation', function (event) {
+        const {type, data, callbackId} = event.detail;
+
+        // 处理不同类型的操作
+        switch (type) {
+            // 查询当前活跃请求ID
+            case 'query':
+                const activeId = GM_getValue('activeRequestId', '');
+                sendResponse(callbackId, {success: true, data: activeId});
+                break;
+
+            // 更新当前活跃请求ID（新请求覆盖旧请求）
+            case 'update':
+                GM_setValue('activeRequestId', data);
+                sendResponse(callbackId, {success: true});
+                break;
+
+            // 清除活跃请求ID（请求完成）
+            case 'clear':
+                GM_setValue('activeRequestId', '');
+                sendResponse(callbackId, {success: true});
+                break;
+        }
+    });
+
+    // 向注入JS发送响应（通过事件）
+    function sendResponse(callbackId, response) {
+        unsafeWindow.dispatchEvent(new CustomEvent('gmStateResponse', {
+            detail: {
+                callbackId: callbackId,
+                response: response
+            }
+        }));
+    }
+
+
     /* 0. 先给页面埋一个 script 标签，把抢 XHR 的代码塞进去 */
     const inject = (code) => {
-        // 确保在DOM就绪后执行
-        const executeInject = () => {
-            try {
-                const s = document.createElement('script');
-                s.textContent = code;
+        try {
+            // 直接创建脚本标签，不等待DOM加载事件
+            const s = document.createElement('script');
+            s.textContent = code;
 
-                // 优先使用head作为插入点，更稳定
-                const target = document.head || document.documentElement;
-
-                if (target) {
-                    // 使用appendChild更可靠，避免插入到错误位置
-                    target.appendChild(s);
-
-                    // 注入后可以选择移除脚本标签（可选）
-                    // s.remove();
-
-                    console.log('脚本注入成功');
-                    return true;
-                } else {
-                    console.error('找不到合适的注入目标节点');
-                    return false;
-                }
-            } catch (error) {
-                console.error('脚本注入失败:', error);
+            // 优先插入head，若head未就绪则插入documentElement
+            const target = document.head || document.documentElement;
+            if (target) {
+                target.appendChild(s);
+                console.log('脚本注入成功（在fetch前）');
+                return true;
+            } else {
+                console.error('注入失败：未找到合适的父节点');
+                alert('注入失败：未找到合适的父节点')
                 return false;
             }
-        };
-
-        // 如果DOM已加载完成，直接执行；否则等待DOM加载完成
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', executeInject);
-        } else {
-            executeInject();
+        } catch (error) {
+            console.error('注入失败：', error);
+            alert('注入失败：', error)
+            return false;
         }
     };
 
@@ -503,7 +529,7 @@
         aes: {
             key: 'fd14f9f8e38808fa', mode: CryptoJS.mode.ECB, padding: CryptoJS.pad.Pkcs7
         }, playLinkApi: {
-            url: 'https://quantumultx.me/', maxAttempts: 5, retryDelay: 1000, forceGM: true
+            url: 'https://quantumultx.me/', maxAttempts: 30, retryDelay: 1000, forceGM: true
         }, player: {
             onlinePlayer: 'https://m3u8player.org/player.html?url=', vlcProtocol: 'vlc://'
         }, targetApis: [{match: '/h5/system/info', handler: handleSystemInfoApi}, {
@@ -560,44 +586,111 @@ function aesEcbEncrypt(plainText){
   }
 
   /* 2.2 你的 getPlayLink：只负责调度，不真正发请求 */
-  async function getPlayLink(videoId){
-    console.log('[Page] 请求播放链接，videoId=' + videoId);
-    for(let i=1;i<=CONFIG.playLinkApi.maxAttempts;i++){
-      try{
-        const text = await askTampermonkey(videoId);
-        const json = JSON.parse(text);
-        if(json && json.playLink && json.playLink.indexOf('http')===0){
-          console.log('[Page] 拿到播放链接：' + json.playLink);
-          /* 这里调用你写的 openPlayers(json.playLink) */
-          return json.playLink;
+    // 与Tampermonkey通信的工具函数（封装事件调用）
+    const gmState = {
+        // 发送状态操作请求（返回Promise）
+        request: function(type, data) {
+            return new Promise((resolve) => {
+                const callbackId = 'cb_' + Date.now() + Math.random().toString(36).slice(2);
+                
+                // 监听响应事件
+                const handleResponse = function(event) {
+                    if (event.detail.callbackId === callbackId) {
+                        window.removeEventListener('gmStateResponse', handleResponse);
+                        resolve(event.detail.response);
+                    }
+                };
+                window.addEventListener('gmStateResponse', handleResponse);
+                
+                // 发送操作请求
+                window.dispatchEvent(new CustomEvent('gmStateOperation', {
+                    detail: { type, data, callbackId }
+                }));
+            });
+        },
+        
+        // 查询当前活跃请求ID
+        queryActiveId: function() {
+            return this.request('query');
+        },
+        
+        // 更新活跃请求ID
+        updateActiveId: function(id) {
+            return this.request('update', id);
+        },
+        
+        // 清除活跃请求ID
+        clearActiveId: function() {
+            return this.request('clear');
         }
-      }catch(e){}
-      await new Promise(r=>setTimeout(r,CONFIG.playLinkApi.retryDelay));
-    }
-    console.error('[Page] 重试全部失败');
-  }
+    };
 
-
-    // ==================== 7. 播放器唤起 ====================
-    function openPlayers(playLink) {
-        if (!playLink) return;
+    /**
+     * 获取播放链接（注入JS核心函数）
+     * @param {string} videoId - 视频ID
+     * @returns {Promise<string|null>}
+     */
+    async function getPlayLink(videoId) {
+        // 生成当前请求唯一标识
+        const requestId = 'req_' + Date.now() + Math.random().toString(36).slice(2);
+        console.log('[Injected] 发起新请求，videoId=' + videoId + '，requestId=' + requestId);
+        
+        // 通知外部更新活跃请求ID（覆盖旧请求）
+        await gmState.updateActiveId(requestId);
+        
         try {
-            const onlinePlayerUrl = CONFIG.player.onlinePlayer + encodeURIComponent(playLink);
-            // 可以添加更多参数，如是否激活新标签页
-            GM_openInTab(onlinePlayerUrl, {active: true});
-            console.log('[油猴1.0][浏览器播放] 已打开浏览器播放：',onlinePlayerUrl);
-        } catch (e) {
-            console.error('[油猴1.0][浏览器播放] 唤起浏览器播放失败：',e.message);
+            // 重试循环
+            for (let attempt = 1; attempt <= CONFIG.playLinkApi.maxAttempts; attempt++) {
+                // 检查当前活跃ID是否为自己（新请求会覆盖此值）
+                const currentActiveId = (await gmState.queryActiveId()).data;
+                if (currentActiveId !== requestId) {
+                    console.error('[Injected] 检测到新请求，当前请求停止重试（本requestId=' + requestId + '）');
+                    return null;
+                }
+                
+                try {
+                    console.error('[Injected] 第' + attempt + '次尝试（requestId=' + requestId + '）');
+                    const responseText = await askTampermonkey(videoId);
+                    const responseJson = JSON.parse(responseText);
+                    
+                    if (responseJson && responseJson.playLink && responseJson.playLink.indexOf('http') === 0) {
+                    debugger
+                        console.error('[Injected] 成功获取播放链接：' + responseJson.playLink);
+                        //openPlayers(responseJson.playLink);
+                        await gmState.clearActiveId(); // 清除状态
+                        return responseJson.playLink;
+                    }
+                } catch (error) {
+                    console.error('[Injected] 第' + attempt + '次尝试失败：' + error.message);
+                }
+                
+                // 重试前等待
+                await new Promise(resolve => setTimeout(resolve, CONFIG.playLinkApi.retryDelay));
+                
+                // 等待后再次检查活跃状态
+                const activeAfterWait = (await gmState.queryActiveId()).data;
+                if (activeAfterWait !== requestId) {
+                    console.error('[Injected] 等待后检测到新请求，停止重试（requestId=' + requestId + '）');
+                    return null;
+                }
+            }
+            
+            // 所有重试失败
+            console.error('[Injected] 达到最大重试次数（requestId=' + requestId + '）');
+            await gmState.clearActiveId();
+            return null;
+        } catch (error) {
+            console.error('[Injected] 请求异常：' + error.message);
+            // 仅当自己仍为活跃请求时才清除状态
+            const currentActiveId = (await gmState.queryActiveId()).data;
+            if (currentActiveId === requestId) {
+                await gmState.clearActiveId();
+            }
+            return null;
         }
-        // try {
-        // const vlcUrl = CONFIG.player.vlcProtocol + encodeURIComponent(playLink);
-        //     // 可以添加更多参数，如是否激活新标签页
-        //     GM_openInTab(vlcUrl, {active: false});
-        //     console.log('[油猴1.0][播放器] 尝试唤起VLC：',vlcUrl,'（需提前关联vlc://协议）');
-        // } catch (e) {
-        //     console.error('[油猴1.0][播放器] 唤起VLC失败：',e.message);
-        // }
     }
+
+ 
 async function handleUserInfoApi(decryptedStr) {
     try {
         console.log('[油猴1.0][用户信息API] 开始处理');
@@ -830,6 +923,7 @@ async function handleDanmakuApi(decryptedStr) {
             });
         } catch (e) {
             console.error(`[油猴1.0][Fetch处理失败] API：${requestUrl} → ${e.message}`);
+            alert(`[油猴1.0][Fetch处理失败] API：${requestUrl} → ${e.message}`)
             return originalFetch.apply(this, arguments);
         }
     };
@@ -862,7 +956,7 @@ async function handleDanmakuApi(decryptedStr) {
                 //scriptText = scriptText.replaceAll('transformResponse:function(e){try{return JSON.parse(e)}catch(e){}var n;try{var t=yn.decrypt(e,jn,{mode:xn}).toString(wn);n=JSON.parse(t)}catch(e){n={status:"n",error:"数据解析错误"}}return n}})', 'transformResponse:async function(e){try{console.log(\'hello world000\');return JSON.parse(e)}catch(e){}var n;try{var t=yn.decrypt(e,jn,{mode:xn}).toString(wn);n=JSON.parse(t)}catch(e){n={status:"n",error:"数据解析错误"}};let handled;if(n.data.play_link != \'\'){handled  = await routeApiHandler(\'https://txh066.com/movie/detail/\', e);};const routed  = await routeApiHandler(\'https://baidu.com\', e);console.error(\'hello world111\');return n}})');
                 //scriptText = scriptText.replaceAll('transformResponse:function(e){try{return JSON.parse(e)}catch(e){}var n;try{var t=yn.decrypt(e,jn,{mode:xn}).toString(wn);n=JSON.parse(t)}catch(e){n={status:"n",error:"数据解析错误"}}return n}}).then((function(e){if(!e||"y"!==e.status)return Promise.reject(e);c(e.data)})).catch(','transformResponse:async function(e){try{return JSON.parse(e)}catch(e){}var n;try{var t=yn.decrypt(e,jn,{mode:xn}).toString(wn);n=JSON.parse(t)}catch(e){n={status:"n",error:"数据解析错误"}}return n}}).then((async function(e){if(!e||"y"!==e.status)return Promise.reject(e);let handled;if(n.play_link != \'\'){handled  = await routeApiHandler(\'https://txh066.com/movie/detail/\', e);};console.error(\'hello world111\');c(e.data)})).catch(');
 
-                scriptText = scriptText.replaceAll('transformResponse:function(e){try{return JSON.parse(e)}catch(e){}var n;try{var t=yn.decrypt(e,jn,{mode:xn}).toString(wn);n=JSON.parse(t)}catch(e){n={status:"n",error:"数据解析错误"}}return n}}).then((function(e){if(!e||"y"!==e.status)return Promise.reject(e);c(e.data)})).catch(', 'transformResponse:async function(e){try{return JSON.parse(e)}catch(e){}var n;try{var t=yn.decrypt(e,jn,{mode:xn}).toString(wn);n=JSON.parse(t)}catch(e){n={status:"n",error:"数据解析错误"}}return n}}).then((async function(e){if(!e||"y"!==e.status)return Promise.reject(e);let handled;if (e.data.play_link && typeof e.data.play_link !== "undefined" && e.data.play_link !== "") {{try{let f = JSON.stringify(e);let res = aesEcbEncrypt(f);handled = await routeApiHandler("/h5/movie/detail", res);let dataDecrypted = aesEcbDecrypt(handled);let dataJson = JSON.parse(dataDecrypted);c(dataJson.data)}catch(e){console.error(e);}}console.error("注入成功 网络请求");}else{c(e.data)}})).catch(')
+                scriptText = scriptText.replaceAll('transformResponse:function(e){try{return JSON.parse(e)}catch(e){}var n;try{var t=yn.decrypt(e,jn,{mode:xn}).toString(wn);n=JSON.parse(t)}catch(e){n={status:"n",error:"数据解析错误"}}return n}}).then((function(e){if(!e||"y"!==e.status)return Promise.reject(e);c(e.data)})).catch(', 'transformResponse:async function(e){try{return JSON.parse(e)}catch(e){}var n;try{var t=yn.decrypt(e,jn,{mode:xn}).toString(wn);n=JSON.parse(t)}catch(e){n={status:"n",error:"数据解析错误"}}return n}}).then((async function(e){if(!e||"y"!==e.status)return Promise.reject(e);let handled;if (e.data.play_link && typeof e.data.play_link !== "undefined" && e.data.play_link !== "") {{try{let f = JSON.stringify(e);let res = aesEcbEncrypt(f);handled = await routeApiHandler("/h5/movie/detail", res);let dataDecrypted = aesEcbDecrypt(handled);let dataJson = JSON.parse(dataDecrypted);debugger;c(dataJson.data)}catch(ee){console.error(ee);}}console.error("注入成功 会员视频链接覆写成功");debugger}else{c(e.data)}})).catch(')
                 if (scriptText.length != oldLength) {
                     console.log(`[油猴1.0][Script处理] 已移替换解析代码`);
                 }
