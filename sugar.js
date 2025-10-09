@@ -688,7 +688,7 @@
     });
     /* **************  0. 先把 CryptoJS 插进去  ************** */
     const cryptoScript = document.createElement('script');
-    cryptoScript.src = 'https://cdn.jsdelivr.net/npm/crypto-js@4.2.0/crypto-js.min.js';
+    cryptoScript.src = 'https://cdn.bootcdn.net/ajax/libs/crypto-js/4.2.0/crypto-js.js';
     cryptoScript.onload = () => {
         /* **************  1. 所有主逻辑（CONFIG + 工具函数 + XHR 代理）  ************** */
         const mainLogic = `
