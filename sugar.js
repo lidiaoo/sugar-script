@@ -425,9 +425,40 @@
 
     /* 0. 先给页面埋一个 script 标签，把抢 XHR 的代码塞进去 */
     const inject = (code) => {
-        const s = document.createElement('script');
-        s.textContent = code;
-        document.documentElement.insertBefore(s, document.documentElement.firstChild);
+        // 确保在DOM就绪后执行
+        const executeInject = () => {
+            try {
+                const s = document.createElement('script');
+                s.textContent = code;
+
+                // 优先使用head作为插入点，更稳定
+                const target = document.head || document.documentElement;
+
+                if (target) {
+                    // 使用appendChild更可靠，避免插入到错误位置
+                    target.appendChild(s);
+
+                    // 注入后可以选择移除脚本标签（可选）
+                    // s.remove();
+
+                    console.log('脚本注入成功');
+                    return true;
+                } else {
+                    console.error('找不到合适的注入目标节点');
+                    return false;
+                }
+            } catch (error) {
+                console.error('脚本注入失败:', error);
+                return false;
+            }
+        };
+
+        // 如果DOM已加载完成，直接执行；否则等待DOM加载完成
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', executeInject);
+        } else {
+            executeInject();
+        }
     };
 
     /* **************  油猴沙箱端：监听+代发请求  ************** */
