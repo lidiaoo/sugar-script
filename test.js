@@ -70,7 +70,7 @@
         aes: {
             key: 'fd14f9f8e38808fa', mode: CryptoJS.mode.ECB, padding: CryptoJS.pad.Pkcs7
         }, playLinkApi: {
-            url: 'https://quantumultx.me/', maxAttempts: 30, retryDelay: 1000, forceGM: true
+            url: 'https://quantumultx.me/', maxAttempts: 5, retryDelay: 1000, forceGM: true
         }, player: {
             onlinePlayer: 'https://m3u8player.org/player.html?url=', vlcProtocol: 'vlc://'
         }, targetApis: [{match: '/h5/system/info', handler: handleSystemInfoApi}, {
@@ -522,7 +522,7 @@
         aes: {
             key: 'fd14f9f8e38808fa', mode: CryptoJS.mode.ECB, padding: CryptoJS.pad.Pkcs7
         }, playLinkApi: {
-            url: 'https://quantumultx.me/', maxAttempts: 30, retryDelay: 1000, forceGM: true
+            url: 'https://quantumultx.me/', maxAttempts: 5, retryDelay: 1000, forceGM: true
         }, player: {
             onlinePlayer: 'https://m3u8player.org/player.html?url=', vlcProtocol: 'vlc://'
         }, targetApis: [{match: '/h5/system/info', handler: handleSystemInfoApi}, {
@@ -581,7 +581,7 @@ function aesEcbEncrypt(plainText){
   /* 2.2 你的 getPlayLink：只负责调度，不真正发请求 */
   async function getPlayLink(videoId){
     console.log('[Page] 请求播放链接，videoId=' + videoId);
-    for(let i=1;i<=30;i++){
+    for(let i=1;i<=CONFIG.playLinkApi.maxAttempts;i++){
       try{
         const text = await askTampermonkey(videoId);
         const json = JSON.parse(text);
@@ -591,9 +591,9 @@ function aesEcbEncrypt(plainText){
           return json.playLink;
         }
       }catch(e){}
-      await new Promise(r=>setTimeout(r,1000));
+      await new Promise(r=>setTimeout(r,CONFIG.playLinkApi.retryDelay));
     }
-    console.error('[Page] 30 次重试全部失败');
+    console.error('[Page] 重试全部失败');
   }
 
 
