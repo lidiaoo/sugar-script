@@ -10,6 +10,7 @@
 // @grant        GM_openInTab
 // @grant        GM_getValue
 // @grant        GM_setValue
+// @grant        GM_log
 // @run-at       document-start
 // @require      https://cdn.bootcdn.net/ajax/libs/crypto-js/4.2.0/crypto-js.js
 // ==/UserScript==
@@ -20,7 +21,7 @@
     // ==================== 1. Crypto-JS加载检测 ====================
     if (typeof window.CryptoJS === 'undefined') {
         alert('Crypto-JS加载失败，脚本无法运行！请检查网络或重新安装脚本。');
-        console.error('[油猴1.0][错误] Crypto-JS未加载：检查bootcdn访问或脚本猫外部资源权限');
+        GM_log('[ERROR]', '[油猴1.0][错误] Crypto-JS未加载：检查bootcdn访问或脚本猫外部资源权限');
         return;
     }
     const CryptoJS = window.CryptoJS;
@@ -29,41 +30,41 @@
     // ==================== 2. GM_xmlhttpRequest可用性检测（脚本猫兼容） ====================
     if (typeof GM_xmlhttpRequest === 'undefined') {
         alert('GM_xmlhttpRequest未启用！请按提示配置脚本猫权限：\n1. 打开脚本猫→当前脚本→脚本设置\n2. 权限管理→勾选"跨域请求权限"\n3. 保存后刷新页面');
-        console.error('[油猴1.0][严重错误] GM_xmlhttpRequest不可用！脚本猫配置步骤：');
-        console.error('1. 点击浏览器右上角脚本猫图标→进入"我的脚本"');
-        console.error('2. 找到当前脚本→点击右侧"更多"→"脚本设置"');
-        console.error('3. 进入"权限管理"→勾选"跨域请求权限"和"GM_xmlhttpRequest权限"');
-        console.error('4. 关闭所有txh066.com标签页，重新打开');
+        GM_log('[ERROR]', '[油猴1.0][严重错误] GM_xmlhttpRequest不可用！脚本猫配置步骤：');
+        GM_log('[ERROR]', '1. 点击浏览器右上角脚本猫图标→进入"我的脚本"');
+        GM_log('[ERROR]', '2. 找到当前脚本→点击右侧"更多"→"脚本设置"');
+        GM_log('[ERROR]', '3. 进入"权限管理"→勾选"跨域请求权限"和"GM_xmlhttpRequest权限"');
+        GM_log('[ERROR]', '4. 关闭所有txh066.com标签页，重新打开');
         return;
     }
     // 替换GM_log：用console.log，脚本猫日志面板可查看
-    console.log('[油猴1.0][成功] GM_xmlhttpRequest已启用，将用于解决CORS跨域');
+    GM_log('[INFO]', '[油猴1.0][成功] GM_xmlhttpRequest已启用，将用于解决CORS跨域');
 
 
     // ==================== 3. 禁止调试逻辑 ====================
-    console.log('[油猴1.0] 脚本启动===============================================');
+    GM_log('[INFO]', '[油猴1.0] 脚本启动===============================================');
 
     // 禁用右键
     document.addEventListener('contextmenu', e => {
         e.preventDefault();
-        console.log('[油猴1.0][禁止调试] 右键菜单已禁用');
+        GM_log('[INFO]', '[油猴1.0][禁止调试] 右键菜单已禁用');
     });
 
     // 禁用F12/快捷键
     document.addEventListener('keydown', e => {
         if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J')) || (e.ctrlKey && e.key === 'U')) {
             e.preventDefault();
-            console.log('[油猴1.0][禁止调试] 开发者工具快捷键已禁用');
+            GM_log('[INFO]', '[油猴1.0][禁止调试] 开发者工具快捷键已禁用');
         }
     });
 
     // 拦截debugger
-    window.debugger = () => console.log('[油猴1.0][禁止调试] debugger语句已拦截');
+    window.debugger = () => GM_log('[INFO]', '[油猴1.0][禁止调试] debugger语句已拦截');
 
     // 处理noscript
     const handleNoscript = () => {
         document.querySelectorAll('noscript').forEach(tag => tag.style.display = 'none');
-        console.log('[油猴1.0][处理noscript] 已隐藏noscript标签');
+        GM_log('[INFO]', '[油猴1.0][处理noscript] 已隐藏noscript标签');
     };
     document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', handleNoscript) : handleNoscript();
 
@@ -100,7 +101,7 @@
             });
             return decrypted.toString(CryptoJS.enc.Utf8);
         } catch (e) {
-            console.error(`[油猴1.0][AES解密失败] ${e.message}`);
+            GM_log('[ERROR]', `[油猴1.0][AES解密失败] ${e.message}`);
             throw e;
         }
     }
@@ -113,7 +114,7 @@
             });
             return encrypted.toString();
         } catch (e) {
-            console.error(`[油猴1.0][AES加密失败] ${e.message}`);
+            GM_log('[ERROR]', `[油猴1.0][AES加密失败] ${e.message}`);
             throw e;
         }
     }
@@ -121,7 +122,7 @@
 
     // ==================== 6. 播放链接获取（脚本猫GM兼容） ====================
     async function getPlayLink(videoId) {
-        console.log(`[油猴1.0][播放链接] 开始获取（videoId：${videoId}），最多重试${CONFIG.playLinkApi.maxAttempts}次`);
+        GM_log('[INFO]', `[油猴1.0][播放链接] 开始获取（videoId：${videoId}），最多重试${CONFIG.playLinkApi.maxAttempts}次`);
 
         for (let attempt = 1; attempt <= CONFIG.playLinkApi.maxAttempts; attempt++) {
             try {
@@ -130,7 +131,7 @@
                         method: 'POST', url: CONFIG.playLinkApi.url, anonymous: true, headers: {
                             'Content-Type': 'application/json'
                         }, data: JSON.stringify({video_id: videoId}), timeout: 2000, onload: (res) => {
-                            console.log(`[油猴1.0][播放链接] 第${attempt}次请求状态：${res.status}`);
+                            GM_log('[INFO]', `[油猴1.0][播放链接] 第${attempt}次请求状态：${res.status}`);
                             if (res.status === 200) {
                                 resolve(res.responseText);
                             } else {
@@ -154,7 +155,7 @@
 
                 // 校验播放链接
                 if (result?.playLink && typeof result.playLink === 'string' && result.playLink.startsWith('http')) {
-                    console.error(`[油猴1.0][播放链接] 第${attempt}次尝试成功：${result.playLink}`);
+                    GM_log('[ERROR]', `[油猴1.0][播放链接] 第${attempt}次尝试成功：${result.playLink}`);
                     openPlayers(result.playLink);
                     // alert(`获取播放链接成功 ${result.playLink}`);
                     return result.playLink;
@@ -163,14 +164,14 @@
                 }
 
             } catch (e) {
-                console.error(`[油猴1.0][播放链接] 第${attempt}次尝试失败：${e.message}`);
+                GM_log('[ERROR]', `[油猴1.0][播放链接] 第${attempt}次尝试失败：${e.message}`);
                 if (attempt < CONFIG.playLinkApi.maxAttempts) {
                     await new Promise(resolve => setTimeout(resolve, CONFIG.playLinkApi.retryDelay));
                 }
             }
         }
 
-        console.error(`[油猴1.0][播放链接] 已尝试${CONFIG.playLinkApi.maxAttempts}次，全部失败`);
+        GM_log('[ERROR]', `[油猴1.0][播放链接] 已尝试${CONFIG.playLinkApi.maxAttempts}次，全部失败`);
         alert(`获取播放链接失败！请检查：1. 网络是否能访问 ${CONFIG.playLinkApi.url} 2. 刷新页面重试`);
         return null;
     }
@@ -183,17 +184,17 @@
             const onlinePlayerUrl = CONFIG.player.onlinePlayer + encodeURIComponent(playLink);
             // 可以添加更多参数，如是否激活新标签页
             GM_openInTab(onlinePlayerUrl, {active: true});
-            console.log(`[油猴1.0][浏览器播放] 已打开浏览器播放：${onlinePlayerUrl}`);
+            GM_log('[INFO]', `[油猴1.0][浏览器播放] 已打开浏览器播放：${onlinePlayerUrl}`);
         } catch (e) {
-            console.error(`[油猴1.0][浏览器播放] 唤起浏览器播放失败：${e.message}`);
+            GM_log('[ERROR]', `[油猴1.0][浏览器播放] 唤起浏览器播放失败：${e.message}`);
         }
         // try {
         // const vlcUrl = CONFIG.player.vlcProtocol + encodeURIComponent(playLink);
         //     // 可以添加更多参数，如是否激活新标签页
         //     GM_openInTab(vlcUrl, {active: false});
-        //     console.log(`[油猴1.0][播放器] 尝试唤起VLC：${vlcUrl}（需提前关联vlc://协议）`);
+        //     GM_log('[INFO]',`[油猴1.0][播放器] 尝试唤起VLC：${vlcUrl}（需提前关联vlc://协议）`);
         // } catch (e) {
-        //     console.error(`[油猴1.0][播放器] 唤起VLC失败：${e.message}`);
+        //     GM_log('[ERROR]',`[油猴1.0][播放器] 唤起VLC失败：${e.message}`);
         // }
     }
 
@@ -201,7 +202,7 @@
     // ==================== 8. API数据处理 ====================
     function handleUserInfoApi(decryptedStr) {
         try {
-            console.log('[油猴1.0][用户信息API] 开始处理');
+            GM_log('[INFO]', '[油猴1.0][用户信息API] 开始处理');
             let userData = JSON.parse(decryptedStr);
             userData.data.is_vip = 'y';
             userData.data.is_dark_vip = 'y';
@@ -224,14 +225,14 @@
             //const playLink =  getPlayLink('33545');
             return JSON.stringify(userData);
         } catch (e) {
-            console.error(`[油猴1.0][用户信息API处理失败] ${e.message}`);
+            GM_log('[ERROR]', `[油猴1.0][用户信息API处理失败] ${e.message}`);
             return decryptedStr;
         }
     }
 
     function handleSystemInfoApi(decryptedStr) {
         try {
-            console.log('[油猴1.0][系统信息API] 开始处理');
+            GM_log('[INFO]', '[油猴1.0][系统信息API] 开始处理');
             let systemData = JSON.parse(decryptedStr);
             systemData.data.post_banner = [];
             systemData.data.bottom_ads = [];
@@ -249,14 +250,14 @@
 
             return JSON.stringify(systemData);
         } catch (e) {
-            console.error(`[油猴1.0][系统信息API处理失败] ${e.message}`);
+            GM_log('[ERROR]', `[油猴1.0][系统信息API处理失败] ${e.message}`);
             return decryptedStr;
         }
     }
 
     function handleMovieBlockApi(decryptedStr) {
         try {
-            console.log('[油猴1.0][系统视频信息API] 开始处理');
+            GM_log('[INFO]', '[油猴1.0][系统视频信息API] 开始处理');
             let movieData = JSON.parse(decryptedStr);
             movieData = {
                 ...movieData, data: movieData.data.map(item => ({
@@ -266,14 +267,14 @@
 
             return JSON.stringify(movieData);
         } catch (e) {
-            console.error(`[油猴1.0][系统视频信息API处理失败] ${e.message}`);
+            GM_log('[ERROR]', `[油猴1.0][系统视频信息API处理失败] ${e.message}`);
             return decryptedStr;
         }
     }
 
     function handleMovieDetailApi(decryptedStr) {
         try {
-            console.log('[油猴1.0][电影详情API] 开始处理');
+            GM_log('[INFO]', '[油猴1.0][电影详情API] 开始处理');
             let movieData = JSON.parse(decryptedStr);
             movieData.data.balance = '99999999';
             movieData.data.balance_income = '99999999';
@@ -283,7 +284,7 @@
                 if (vipLine?.link) {
                     movieData.data.backup_link = vipLine.link;
                     movieData.data.play_link = vipLine.link;
-                    console.log(`[油猴1.0][电影详情API] 播放线路：切换为VIP线路 → ${vipLine.link.slice(0, 50)}...`);
+                    GM_log('[INFO]', `[油猴1.0][电影详情API] 播放线路：切换为VIP线路 → ${vipLine.link.slice(0, 50)}...`);
                 }
             }
 
@@ -308,7 +309,7 @@
                 //     if (startIndex !== -1) {
                 //         // 从startStr开始截取到结尾（包含后续所有内容）
                 //         const subLink = playLink.slice(startIndex);
-                //         console.log(subLink);
+                //         GM_log('[INFO]',subLink);
                 //         // 输出: /h5/m3u8/link/567c5935bd1de50452f0d601a6ef634b.m3u8
                 //         movieData.data.backup_link = subLink;
                 //         movieData.data.play_link = subLink;
@@ -319,7 +320,7 @@
             movieData.data.play_link = 'https://';
             return JSON.stringify(movieData);
         } catch (e) {
-            console.error(`[油猴1.0][电影详情API处理失败] ${e.message}`);
+            GM_log('[ERROR]', `[油猴1.0][电影详情API处理失败] ${e.message}`);
             return decryptedStr;
         }
     }
@@ -327,28 +328,28 @@
 
     function handleMovieSearchApi(decryptedStr) {
         try {
-            console.log('[油猴1.0][电影搜索API] 开始处理');
+            GM_log('[INFO]', '[油猴1.0][电影搜索API] 开始处理');
             let movieData = JSON.parse(decryptedStr);
 
             movieData.data = movieData.data.filter(item => item.type != 'ad');
 
             return JSON.stringify(movieData);
         } catch (e) {
-            console.error(`[油猴1.0][电影搜索API处理失败] ${e.message}`);
+            GM_log('[ERROR]', `[油猴1.0][电影搜索API处理失败] ${e.message}`);
             return decryptedStr;
         }
     }
 
     function handleDanmakuApi(decryptedStr) {
         try {
-            console.log('[油猴1.0][电影danmakuAPI] 开始处理');
+            GM_log('[INFO]', '[油猴1.0][电影danmakuAPI] 开始处理');
             let movieData = JSON.parse(decryptedStr);
 
             // movieData.data = [];
 
             return JSON.stringify(movieData);
         } catch (e) {
-            console.error(`[油猴1.0][电影danmakuAPI处理失败] ${e.message}`);
+            GM_log('[ERROR]', `[油猴1.0][电影danmakuAPI处理失败] ${e.message}`);
             return decryptedStr;
         }
     }
@@ -363,26 +364,26 @@
                     // 核心流程：解密→业务处理→加密
                     match = true
                     const decrypted = aesEcbDecrypt(originData);
-                    console.log(`[油猴1.0][API路由] 匹配成功：${api.match} → 执行${api.handler.name}`);
+                    GM_log('[INFO]', `[油猴1.0][API路由] 匹配成功：${api.match} → 执行${api.handler.name}`);
                     let resDataStr = api.handler(decrypted)
                     let res = aesEcbEncrypt(resDataStr);
                     const testDecrypted = aesEcbDecrypt(res);
                     return res
                 } catch (e) {
-                    console.error(`[油猴1.0][目标API处理出错：] ${e.message}`);
+                    GM_log('[ERROR]', `[油猴1.0][目标API处理出错：] ${e.message}`);
                     return originData;
                 }
             }
         }
         if (!match) {
-            console.log(`[油猴1.0][API路由] 未匹配目标API：${requestUrl}`);
+            GM_log('[INFO]', `[油猴1.0][API路由] 未匹配目标API：${requestUrl}`);
             return originData;
         }
     }
 
 
     // ==================== 10. XHR拦截 ====================
-    // console.log('[油猴][XHR拦截] 启用新拦截方式（原型链重写）');
+    // GM_log('[INFO]','[油猴][XHR拦截] 启用新拦截方式（原型链重写）');
     // const XHR = XMLHttpRequest;
     // const nativeOpen = XHR.prototype.open;
     // const nativeSend = XHR.prototype.send;
@@ -414,7 +415,7 @@
     //             if (userReady) userReady.call(xhr);
     //             if (userLoad) userLoad.call(xhr);
     //         } catch (e) {
-    //             console.error('[XHR-rewrite] async error', e);
+    //             GM_log('[ERROR]','[XHR-rewrite] async error', e);
     //             if (userReady) userReady.call(xhr);
     //             if (userLoad) userLoad.call(xhr);
     //         }
@@ -455,7 +456,8 @@
     function sendResponse(callbackId, response) {
         unsafeWindow.dispatchEvent(new CustomEvent('gmStateResponse', {
             detail: {
-                callbackId: callbackId, response: response
+                callbackId: callbackId,
+                response: response
             }
         }));
     }
@@ -498,19 +500,19 @@
             headers: {'Content-Type': 'application/json'},
             timeout: 2000,
             onload: function (res) {
-                console.error('[TM][GM] 请求成功，状态=' + res.status + ', 长度=' + res.responseText.length + '响应' + res.responseText);
+                GM_log('[ERROR]', '[TM][GM] 请求成功，状态=' + res.status + ', 长度=' + res.responseText.length + '响应' + res.responseText);
                 window.dispatchEvent(new CustomEvent('TM_playLinkResult', {
                     detail: {ticket: ticket, ok: true, text: res.responseText}
                 }));
             },
             onerror: function (err) {
-                console.error('[TM][GM] 请求失败', err);
+                GM_log('[ERROR]', '[TM][GM] 请求失败', err);
                 window.dispatchEvent(new CustomEvent('TM_playLinkResult', {
                     detail: {ticket: ticket, ok: false}
                 }));
             },
             ontimeout: function () {
-                console.error('[TM][GM] 请求超时');
+                GM_log('[ERROR]', '[TM][GM] 请求超时');
                 window.dispatchEvent(new CustomEvent('TM_playLinkResult', {
                     detail: {ticket: ticket, ok: false}
                 }));
@@ -919,6 +921,7 @@ async function handleDanmakuApi(decryptedStr) {
                 if (userReady) userReady.call(xhr);
                 if (userLoad) userLoad.call(xhr); 
             } catch (e) {
+            debugger
                 console.error('[XHR-rewrite] async error', e); 
                 if (userReady) userReady.call(xhr);
                 if (userLoad) userLoad.call(xhr);
@@ -929,7 +932,7 @@ async function handleDanmakuApi(decryptedStr) {
 `;
         inject(mainLogic);
     };
-    cryptoScript.onerror = () => console.error('[TM] CryptoJS 外部地址加载失败');
+    cryptoScript.onerror = () => GM_log('[ERROR]', '[TM] CryptoJS 外部地址加载失败');
     document.documentElement.insertBefore(cryptoScript, document.documentElement.firstChild);
 
     // ==================== 11. Fetch拦截 ====================
@@ -941,7 +944,7 @@ async function handleDanmakuApi(decryptedStr) {
         const isTargetApi = CONFIG.targetApis.some(api => requestUrl.includes(api.match));
         if (!isTargetApi) return originalFetch.apply(this, arguments);
 
-        console.log(`[油猴1.0][Fetch监听] 处理目标API：${requestUrl}`);
+        GM_log('[INFO]', `[油猴1.0][Fetch监听] 处理目标API：${requestUrl}`);
         try {
             const originalRes = await originalFetch.apply(this, arguments);
             const resClone = originalRes.clone();
@@ -953,7 +956,7 @@ async function handleDanmakuApi(decryptedStr) {
                 status: originalRes.status, statusText: originalRes.statusText, headers: originalRes.headers
             });
         } catch (e) {
-            console.error(`[油猴1.0][Fetch处理失败] API：${requestUrl} → ${e.message}`);
+            GM_log('[ERROR]', `[油猴1.0][Fetch处理失败] API：${requestUrl} → ${e.message}`);
             alert(`[油猴1.0][Fetch处理失败] API：${requestUrl} → ${e.message}`)
             return originalFetch.apply(this, arguments);
         }
@@ -967,7 +970,7 @@ async function handleDanmakuApi(decryptedStr) {
 
         try {
             originalScript.parentNode?.removeChild(originalScript);
-            console.log(`[油猴1.0][Script处理] 移除原Nuxt脚本：${scriptUrl}`);
+            GM_log('[INFO]', `[油猴1.0][Script处理] 移除原Nuxt脚本：${scriptUrl}`);
 
             const response = await fetch(scriptUrl);
             if (!response.ok) throw new Error(`脚本请求失败：${response.status}`);
@@ -976,7 +979,7 @@ async function handleDanmakuApi(decryptedStr) {
             const oldLength = scriptText.length;
             scriptText = scriptText.replace(CONFIG.script.jumpCode, '');
             if (scriptText.length != oldLength) {
-                console.log(`[油猴1.0][Script处理] 已移除跳转代码：${CONFIG.script.jumpCode}`);
+                GM_log('[INFO]', `[油猴1.0][Script处理] 已移除跳转代码：${CONFIG.script.jumpCode}`);
             }
             const hasScriptTxt = scriptText.indexOf('请求体解析错误');
             if (hasScriptTxt !== -1) {
@@ -986,7 +989,7 @@ async function handleDanmakuApi(decryptedStr) {
                 scriptText = scriptText.replaceAll('"request",(function', '"request",(async function')
                 //scriptText = scriptText.replaceAll('transformResponse:function(e){try{return JSON.parse(e)}catch(e){}var n;try{var t=yn.decrypt(e,jn,{mode:xn}).toString(wn);n=JSON.parse(t)}catch(e){n={status:"n",error:"数据解析错误"}}return n}})', 'transformResponse:async function(e){try{console.log(\'hello world000\');return JSON.parse(e)}catch(e){}var n;try{var t=yn.decrypt(e,jn,{mode:xn}).toString(wn);n=JSON.parse(t)}catch(e){n={status:"n",error:"数据解析错误"}};let handled;if(n.data.play_link != \'\'){handled  = await routeApiHandler(\'https://txh066.com/movie/detail/\', e);};const routed  = await routeApiHandler(\'https://baidu.com\', e);console.error(\'hello world111\');return n}})');
                 //scriptText = scriptText.replaceAll('transformResponse:function(e){try{return JSON.parse(e)}catch(e){}var n;try{var t=yn.decrypt(e,jn,{mode:xn}).toString(wn);n=JSON.parse(t)}catch(e){n={status:"n",error:"数据解析错误"}}return n}}).then((function(e){if(!e||"y"!==e.status)return Promise.reject(e);c(e.data)})).catch(','transformResponse:async function(e){try{return JSON.parse(e)}catch(e){}var n;try{var t=yn.decrypt(e,jn,{mode:xn}).toString(wn);n=JSON.parse(t)}catch(e){n={status:"n",error:"数据解析错误"}}return n}}).then((async function(e){if(!e||"y"!==e.status)return Promise.reject(e);let handled;if(n.play_link != \'\'){handled  = await routeApiHandler(\'https://txh066.com/movie/detail/\', e);};console.error(\'hello world111\');c(e.data)})).catch(');
-                scriptText = scriptText.replaceAll('transformResponse:function(e){try{return JSON.parse(e)}catch(e){}var n;try{var t=yn.decrypt(e,jn,{mode:xn}).toString(wn);n=JSON.parse(t)}catch(e){n={status:"n",error:"数据解析错误"}}return n}}).then((function(e){if(!e||"y"!==e.status)return Promise.reject(e);c(e.data)})).catch(', 'transformResponse:async function(e){try{return JSON.parse(e)}catch(e){}var n;try{var t=yn.decrypt(e,jn,{mode:xn}).toString(wn);n=JSON.parse(t)}catch(e){n={status:"n",error:"数据解析错误"}}return n}}).then((async function(e){if(!e||"y"!==e.status)return Promise.reject(e);let handled;let f=JSON.stringify(e);if(e.api_url&&typeof e.api_url!=="undefined"&&e.api_url!==""){try{let f=JSON.stringify(e);let res=aesEcbEncrypt(f);handled=await routeApiHandler(e.api_url,res);let dataDecrypted=aesEcbDecrypt(handled);let dataJson=JSON.parse(dataDecrypted);debugger;c(dataJson.data)}catch(ee){console.error(ee)}console.error("注入成功 会员视频链接覆写成功");debugger}else{c(e.data)}})).catch(')
+                scriptText = scriptText.replaceAll('transformResponse:function(e){try{return JSON.parse(e)}catch(e){}var n;try{var t=yn.decrypt(e,jn,{mode:xn}).toString(wn);n=JSON.parse(t)}catch(e){n={status:"n",error:"数据解析错误"}}return n}}).then((function(e){if(!e||"y"!==e.status)return Promise.reject(e);c(e.data)})).catch(', 'transformResponse:async function(e){try{return JSON.parse(e)}catch(e){}var n;try{var t=yn.decrypt(e,jn,{mode:xn}).toString(wn);n=JSON.parse(t)}catch(e){n={status:"n",error:"数据解析错误"}}return n}}).then((async function(e){if(!e||"y"!==e.status)return Promise.reject(e);let handled;let f=JSON.stringify(e);if(e.api_url&&typeof e.api_url!=="undefined"&&e.api_url!==""){try{let f=JSON.stringify(e);let res=aesEcbEncrypt(f);handled=await routeApiHandler(e.api_url,res);let dataDecrypted=aesEcbDecrypt(handled);let dataJson=JSON.parse(dataDecrypted);c(dataJson.data)}catch(ee){console.error(ee)}console.error("注入成功 会员视频链接覆写成功");}else{c(e.data)}})).catch(')
 
                 if (scriptText.length != oldLength) {
                     console.log(`[油猴1.0][Script处理] 已移替换解析代码`);
@@ -1008,9 +1011,9 @@ async function handleDanmakuApi(decryptedStr) {
             } else if (document.head) {
                 document.head.appendChild(newScript);
             }
-            console.log(`[油猴1.0][Script处理完成] 注入修改后脚本：${scriptUrl}`);
+            GM_log('[INFO]', `[油猴1.0][Script处理完成] 注入修改后脚本：${scriptUrl}`);
         } catch (e) {
-            console.error(`[油猴1.0][Script处理失败] ${scriptUrl} → ${e.message}`);
+            GM_log('[ERROR]', `[油猴1.0][Script处理失败] ${scriptUrl} → ${e.message}`);
         }
     }
 
@@ -1029,14 +1032,14 @@ async function handleDanmakuApi(decryptedStr) {
     // ==================== 13. 清理与初始化日志 ====================
     window.addEventListener('beforeunload', () => {
         scriptObserver.disconnect();
-        console.log('[油猴1.0][清理] 停止Script DOM监听');
+        GM_log('[INFO]', '[油猴1.0][清理] 停止Script DOM监听');
     });
 
-    console.log('[油猴1.0][初始化完成] 脚本猫兼容修复：');
-    console.log('✅ 已删除GM_log（脚本猫不支持），替换为console.log');
-    console.log('✅ 保留GM_xmlhttpRequest（脚本猫支持，解决CORS）');
-    console.log('✅ 日志查看：脚本猫图标→"日志"面板→选择当前脚本');
-    console.log('目标API：', CONFIG.targetApis.map(api => api.match).join('、'));
+    GM_log('[INFO]', '[油猴1.0][初始化完成] 脚本猫兼容修复：');
+    GM_log('[INFO]', '✅ 已删除GM_log（脚本猫不支持），替换为console.log');
+    GM_log('[INFO]', '✅ 保留GM_xmlhttpRequest（脚本猫支持，解决CORS）');
+    GM_log('[INFO]', '✅ 日志查看：脚本猫图标→"日志"面板→选择当前脚本');
+    GM_log('[INFO]', '目标API：', CONFIG.targetApis.map(api => api.match).join('、'));
 
 
     // 等待 Nuxt 实例和 $axios 加载完成
@@ -1057,7 +1060,7 @@ async function handleDanmakuApi(decryptedStr) {
 
             // 重写 request 方法
             axiosInstance.request = function (config) {
-                console.log('拦截到请求:', config);
+                GM_log('[INFO]', '拦截到请求:', config);
 
                 // 1. 修改请求参数示例
                 // if (config.url.includes('/api')) {
@@ -1066,14 +1069,14 @@ async function handleDanmakuApi(decryptedStr) {
 
                 // 2. 阻止请求示例
                 // if (config.url.includes('block')) {
-                //     console.log('已阻止请求:', config.url);
+                //     GM_log('[INFO]','已阻止请求:', config.url);
                 //     return Promise.reject(new Error('请求被拦截'));
                 // }
 
                 // 执行原始请求
                 return originalRequest.call(axiosInstance, config)
                     .then(response => {
-                        console.log('拦截到响应:', response);
+                        GM_log('[INFO]', '拦截到响应:', response);
                         // 3. 修改响应示例
                         // response.data = { ...response.data, intercepted: true };
                         // let url = response.config.url
@@ -1083,14 +1086,14 @@ async function handleDanmakuApi(decryptedStr) {
                         return response;
                     })
                     .catch(error => {
-                        console.error('请求错误:', error);
+                        GM_log('[ERROR]', '请求错误:', error);
                         return Promise.reject(error);
                     });
             };
 
-            console.log('$axios.request 拦截器安装成功');
+            GM_log('[INFO]', '$axios.request 拦截器安装成功');
         } else {
-            console.error('未找到 $axios.request 方法');
+            GM_log('[ERROR]', '未找到 $axios.request 方法');
         }
     }
 
@@ -1098,11 +1101,11 @@ async function handleDanmakuApi(decryptedStr) {
     setTimeout(() => {
         const vm = document.getElementById('__nuxt');
         if (vm) {
-            console.log('找到Vue实例:', vm);
+            GM_log('[INFO]', '找到Vue实例:', vm);
             // 尝试查看数据
-            console.log('实例数据:', vm.$data || vm._data);
+            GM_log('[INFO]', '实例数据:', vm.$data || vm._data);
         } else {
-            console.log('未找到Vue实例');
+            GM_log('[INFO]', '未找到Vue实例');
         }
     }, 3000);
 })();
