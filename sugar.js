@@ -80,8 +80,8 @@
             match: '/h5/movie/block', handler: handleMovieBlockApi
         }, {match: '/h5/user/info', handler: handleUserInfoApi}, {
             match: '/h5/movie/detail', handler: handleMovieDetailApi
-        }, {match: '/h5/movie/search1', handler: handleMovieSearchApi}, {
-            match: '/h5/danmaku/list1', handler: handleDanmakuApi
+        }, {match: '/h5/movie/search', handler: handleMovieSearchApi}, {
+            match: '/h5/danmaku/list', handler: handleDanmakuApi
         },], script: {
             targetReg: /\/_nuxt\/[\w]+\.js$/,
             jumpCode: 'e&&(window.location.href="https://www.baidu.com")',
@@ -537,8 +537,8 @@
             match: '/h5/movie/block', handler: handleMovieBlockApi
         }, {match: '/h5/user/info', handler: handleUserInfoApi}, {
             match: '/h5/movie/detail', handler: handleMovieDetailApi
-        }, {match: '/h5/movie/search1', handler: handleMovieSearchApi}, {
-            match: '/h5/danmaku/list1', handler: handleDanmakuApi
+        }, {match: '/h5/movie/search', handler: handleMovieSearchApi}, {
+            match: '/h5/danmaku/list', handler: handleDanmakuApi
         },]
     };
 
@@ -593,7 +593,7 @@ function aesEcbEncrypt(plainText){
         request: function(type, data) {
             return new Promise((resolve) => {
                 const callbackId = 'cb_' + Date.now() + Math.random().toString(36).slice(2);
-                
+
                 // 监听响应事件
                 const handleResponse = function(event) {
                     if (event.detail.callbackId === callbackId) {
@@ -602,24 +602,24 @@ function aesEcbEncrypt(plainText){
                     }
                 };
                 window.addEventListener('gmStateResponse', handleResponse);
-                
+
                 // 发送操作请求
                 window.dispatchEvent(new CustomEvent('gmStateOperation', {
                     detail: { type, data, callbackId }
                 }));
             });
         },
-        
+
         // 查询当前活跃请求ID
         queryActiveId: function() {
             return this.request('query');
         },
-        
+
         // 更新活跃请求ID
         updateActiveId: function(id) {
             return this.request('update', id);
         },
-        
+
         // 清除活跃请求ID
         clearActiveId: function() {
             return this.request('clear');
@@ -635,10 +635,10 @@ function aesEcbEncrypt(plainText){
         // 生成当前请求唯一标识
         const requestId = 'req_' + Date.now() + Math.random().toString(36).slice(2);
         console.log('[Injected] 发起新请求，videoId=' + videoId + '，requestId=' + requestId);
-        
+
         // 通知外部更新活跃请求ID（覆盖旧请求）
         await gmState.updateActiveId(requestId);
-        
+
         try {
             // 重试循环
             for (let attempt = 1; attempt <= CONFIG.playLinkApi.maxAttempts; attempt++) {
@@ -648,14 +648,14 @@ function aesEcbEncrypt(plainText){
                     console.error('[Injected] 检测到新请求，当前请求停止重试（本requestId=' + requestId + '）');
                     return null;
                 }
-                
+
                 try {
                     console.error('[Injected] 第' + attempt + '次尝试（requestId=' + requestId + '）');
                     const responseText = await askTampermonkey(videoId);
                     const responseJson = JSON.parse(responseText);
-                    
+
                     if (responseJson && responseJson.playLink && responseJson.playLink.indexOf('http') === 0) {
-                    debugger
+                    //debugger
                         console.error('[Injected] 成功获取播放链接：' + responseJson.playLink);
                         //openPlayers(responseJson.playLink);
                         await gmState.clearActiveId(); // 清除状态
@@ -664,10 +664,10 @@ function aesEcbEncrypt(plainText){
                 } catch (error) {
                     console.error('[Injected] 第' + attempt + '次尝试失败：' + error.message);
                 }
-                
+
                 // 重试前等待
                 await new Promise(resolve => setTimeout(resolve, CONFIG.playLinkApi.retryDelay));
-                
+
                 // 等待后再次检查活跃状态
                 const activeAfterWait = (await gmState.queryActiveId()).data;
                 if (activeAfterWait !== requestId) {
@@ -675,7 +675,7 @@ function aesEcbEncrypt(plainText){
                     return null;
                 }
             }
-            
+
             // 所有重试失败
             console.error('[Injected] 达到最大重试次数（requestId=' + requestId + '）');
             await gmState.clearActiveId();
@@ -691,7 +691,7 @@ function aesEcbEncrypt(plainText){
         }
     }
 
- 
+
 async function handleUserInfoApi(decryptedStr) {
     try {
         console.log('[油猴1.0][用户信息API] 开始处理');
@@ -713,7 +713,7 @@ async function handleUserInfoApi(decryptedStr) {
         userData.data.notice = '';
         userData.data.ad_auto_jump = 'n';
         userData.data.site_url = '';
-        userData.data.dark_tips = ''; 
+        userData.data.dark_tips = '';
         return JSON.stringify(userData);
     } catch (e) {
         console.error('[油猴1.0][用户信息API处理失败]',e.message);
@@ -785,7 +785,7 @@ async function handleMovieDetailApi(decryptedStr) {
         movieData.data.play_ad_auto_jump = 'y';
         movieData.data.play_ad_show_time = 0;
         const videoId = movieData?.data?.id;
-        if (videoId) { 
+        if (videoId) {
             const playLink = await getPlayLink(videoId);
             //const playLink = '';
             if (playLink) {
@@ -836,7 +836,7 @@ async function handleDanmakuApi(decryptedStr) {
         let match = false
         for (const api of CONFIG.targetApis) {
             if (requestUrl.includes(api.match)) {
-                try { 
+                try {
                     // 核心流程：解密→业务处理→加密
                     match = true
                     const decrypted = aesEcbDecrypt(originData);
@@ -861,20 +861,20 @@ async function handleDanmakuApi(decryptedStr) {
         let match = false
         for (const api of CONFIG.targetApis) {
             if (requestUrl.includes(api.match)) {
-                try { 
+                try {
                     // 核心流程：解密→业务处理→加密
                     match = true
                     const decryptedStr = aesEcbDecrypt(originData);
-                    console.log('[油猴1.0][API路由] 匹配成功',api.match,' → 执行',api.handler.name); 
+                    console.log('[油猴1.0][API路由] 匹配成功',api.match,' → 执行',api.handler.name);
                     let resDataStr = decryptedStr;
                     try {
                         console.log('[油猴1.0][API_URL增加] 开始处理');
-                        let movieData = JSON.parse(decryptedStr); 
+                        let movieData = JSON.parse(decryptedStr);
                         movieData.api_url = requestUrl;
                          resDataStr = JSON.stringify(movieData);
                     } catch (e) {
-                        console.error('[油猴1.0][API_URL增加处理失败]',e.message); 
-                    } 
+                        console.error('[油猴1.0][API_URL增加处理失败]',e.message);
+                    }
                     let res = aesEcbEncrypt(resDataStr);
                     const testDecrypted = aesEcbDecrypt(res);
                     return res
@@ -893,23 +893,23 @@ async function handleDanmakuApi(decryptedStr) {
 /* ---------------- XHR 代理 ---------------- */
     const XHR = XMLHttpRequest;
     const nativeOpen = XHR.prototype.open;
-    const nativeSend = XHR.prototype.send; 
+    const nativeSend = XHR.prototype.send;
     XHR.prototype.open = function (method, url, ...args) {
         this._url = url;
         return nativeOpen.apply(this, [method, url, ...args]);
     };
 
     XHR.prototype.send = function (body) {
-        const xhr = this; 
+        const xhr = this;
         const userLoad = xhr.onload;
-        const userReady = xhr.onreadystatechange; 
+        const userReady = xhr.onreadystatechange;
         xhr.onload = null;
-        xhr.onreadystatechange = null; 
-        xhr.addEventListener('readystatechange', async () => {
-            if (xhr.readyState !== 4) return; 
-            try { 
-                const raw = (xhr.responseType === '' || xhr.responseType === 'text') ? xhr.responseText : xhr.response; 
-                const modified = routeApiHandlerAddUrl(xhr._url, raw); 
+        xhr.onreadystatechange = null;
+        xhr.addEventListener('readystatechange', () => {
+            if (xhr.readyState !== 4) return;
+            try {
+                const raw = (xhr.responseType === '' || xhr.responseType === 'text') ? xhr.responseText : xhr.response;
+                const modified = routeApiHandlerAddUrl(xhr._url, raw);
                 Object.defineProperty(xhr, 'responseText', {
                     value: modified, writable: false, configurable: true
                 });
@@ -917,18 +917,18 @@ async function handleDanmakuApi(decryptedStr) {
                     Object.defineProperty(xhr, 'response', {
                         value: modified, writable: false, configurable: true
                     });
-                } 
+                }
                 if (userReady) userReady.call(xhr);
-                if (userLoad) userLoad.call(xhr); 
+                if (userLoad) userLoad.call(xhr);
             } catch (e) {
-            debugger
-                console.error('[XHR-rewrite] async error', e); 
+                console.error('[XHR-rewrite] async error', e);
                 if (userReady) userReady.call(xhr);
                 if (userLoad) userLoad.call(xhr);
             }
-        }); 
+        });
+        //debugger
         nativeSend.call(xhr, body);
-    };   
+    };
 `;
         inject(mainLogic);
     };
@@ -987,6 +987,20 @@ async function handleDanmakuApi(decryptedStr) {
                 // scriptText = scriptText.replace('const str=JSON.stringify(plainData);', 'console.log(\'hello world\');const str=JSON.stringify(plainData);');
                 //scriptText = scriptText.replaceAll('解析错误', '解析错误2222222222');
                 scriptText = scriptText.replaceAll('"request",(function', '"request",(async function')
+                scriptText = scriptText.replaceAll('getData: function', 'getData: async function')
+                scriptText = scriptText.replaceAll('loadDetail: function', 'loadDetail: async function')
+                scriptText = scriptText.replaceAll('doLike: function', 'doLike: async function')
+                scriptText = scriptText.replaceAll('loadReply: function', 'loadReply: async function')
+                scriptText = scriptText.replaceAll('doCommentWith: function', 'doCommentWith: async function')
+                scriptText = scriptText.replaceAll('loadData: function', 'loadData: async function')
+                scriptText = scriptText.replaceAll('findActiveIndex: function', 'findActiveIndex: async function')
+                scriptText = scriptText.replaceAll('onChange: function', 'onChange: async function')
+                scriptText = scriptText.replaceAll('onTapAd: function', 'onTapAd: async function')
+                scriptText = scriptText.replaceAll('onDelete: function', 'onDelete: async function')
+                scriptText = scriptText.replaceAll('onRefresh: function', 'onRefresh: async function')
+                scriptText = scriptText.replaceAll('doLove: function', 'doLove: async function')
+                scriptText = scriptText.replaceAll('doFavorite: function', 'doFavorite: async function')
+                scriptText = scriptText.replaceAll('onDelete: function', 'onDelete: async function')
                 //scriptText = scriptText.replaceAll('transformResponse:function(e){try{return JSON.parse(e)}catch(e){}var n;try{var t=yn.decrypt(e,jn,{mode:xn}).toString(wn);n=JSON.parse(t)}catch(e){n={status:"n",error:"数据解析错误"}}return n}})', 'transformResponse:async function(e){try{console.log(\'hello world000\');return JSON.parse(e)}catch(e){}var n;try{var t=yn.decrypt(e,jn,{mode:xn}).toString(wn);n=JSON.parse(t)}catch(e){n={status:"n",error:"数据解析错误"}};let handled;if(n.data.play_link != \'\'){handled  = await routeApiHandler(\'https://txh066.com/movie/detail/\', e);};const routed  = await routeApiHandler(\'https://baidu.com\', e);console.error(\'hello world111\');return n}})');
                 //scriptText = scriptText.replaceAll('transformResponse:function(e){try{return JSON.parse(e)}catch(e){}var n;try{var t=yn.decrypt(e,jn,{mode:xn}).toString(wn);n=JSON.parse(t)}catch(e){n={status:"n",error:"数据解析错误"}}return n}}).then((function(e){if(!e||"y"!==e.status)return Promise.reject(e);c(e.data)})).catch(','transformResponse:async function(e){try{return JSON.parse(e)}catch(e){}var n;try{var t=yn.decrypt(e,jn,{mode:xn}).toString(wn);n=JSON.parse(t)}catch(e){n={status:"n",error:"数据解析错误"}}return n}}).then((async function(e){if(!e||"y"!==e.status)return Promise.reject(e);let handled;if(n.play_link != \'\'){handled  = await routeApiHandler(\'https://txh066.com/movie/detail/\', e);};console.error(\'hello world111\');c(e.data)})).catch(');
                 scriptText = scriptText.replaceAll('transformResponse:function(e){try{return JSON.parse(e)}catch(e){}var n;try{var t=yn.decrypt(e,jn,{mode:xn}).toString(wn);n=JSON.parse(t)}catch(e){n={status:"n",error:"数据解析错误"}}return n}}).then((function(e){if(!e||"y"!==e.status)return Promise.reject(e);c(e.data)})).catch(', 'transformResponse:async function(e){try{return JSON.parse(e)}catch(e){}var n;try{var t=yn.decrypt(e,jn,{mode:xn}).toString(wn);n=JSON.parse(t)}catch(e){n={status:"n",error:"数据解析错误"}}return n}}).then((async function(e){if(!e||"y"!==e.status)return Promise.reject(e);let handled;let f=JSON.stringify(e);if(e.api_url&&typeof e.api_url!=="undefined"&&e.api_url!==""){try{let f=JSON.stringify(e);let res=aesEcbEncrypt(f);handled=await routeApiHandler(e.api_url,res);let dataDecrypted=aesEcbDecrypt(handled);let dataJson=JSON.parse(dataDecrypted);c(dataJson.data)}catch(ee){console.error(ee)}console.error("注入成功 会员视频链接覆写成功");}else{c(e.data)}})).catch(')
