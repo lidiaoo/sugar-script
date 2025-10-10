@@ -278,14 +278,14 @@
             movieData.data.balance = '99999999';
             movieData.data.balance_income = '99999999';
             movieData.data.balance_freeze = '0';
-            // if (movieData?.data?.lines && movieData.data.lines.length >= 2) {
-            //     const vipLine = movieData.data.lines[1];
-            //     if (vipLine?.link) {
-            //         movieData.data.backup_link = vipLine.link;
-            //         movieData.data.play_link = vipLine.link;
-            //         console.log(`[油猴1.0][电影详情API] 播放线路：切换为VIP线路 → ${vipLine.link.slice(0, 50)}...`);
-            //     }
-            // }
+            if (movieData?.data?.lines && movieData.data.lines.length >= 2) {
+                const vipLine = movieData.data.lines[1];
+                if (vipLine?.link) {
+                    movieData.data.backup_link = vipLine.link;
+                    movieData.data.play_link = vipLine.link;
+                    console.log(`[油猴1.0][电影详情API] 播放线路：切换为VIP线路 → ${vipLine.link.slice(0, 50)}...`);
+                }
+            }
 
             movieData.data.ad = [];
             movieData.data.ads = [];
@@ -315,8 +315,8 @@
                 //     }
                 // }
             }
-            // movieData.data.backup_link = 'https://';
-            // movieData.data.play_link = 'https://';
+            movieData.data.backup_link = 'https://';
+            movieData.data.play_link = 'https://';
             return JSON.stringify(movieData);
         } catch (e) {
             console.error(`[油猴1.0][电影详情API处理失败] ${e.message}`);
@@ -382,45 +382,45 @@
 
 
     // ==================== 10. XHR拦截 ====================
-    console.log('[油猴][XHR拦截] 启用新拦截方式（原型链重写）');
-    const XHR = XMLHttpRequest;
-    const nativeOpen = XHR.prototype.open;
-    const nativeSend = XHR.prototype.send;
-    XHR.prototype.open = function (method, url, ...args) {
-        this._url = url;
-        return nativeOpen.apply(this, [method, url, ...args]);
-    };
+    // console.log('[油猴][XHR拦截] 启用新拦截方式（原型链重写）');
+    // const XHR = XMLHttpRequest;
+    // const nativeOpen = XHR.prototype.open;
+    // const nativeSend = XHR.prototype.send;
+    // XHR.prototype.open = function (method, url, ...args) {
+    //     this._url = url;
+    //     return nativeOpen.apply(this, [method, url, ...args]);
+    // };
 
-    XHR.prototype.send = function (body) {
-        const xhr = this;
-        const userLoad = xhr.onload;
-        const userReady = xhr.onreadystatechange;
-        xhr.onload = null;
-        xhr.onreadystatechange = null;
-        xhr.addEventListener('readystatechange', async () => {
-            if (xhr.readyState !== 4) return;
-            try {
-                const raw = (xhr.responseType === '' || xhr.responseType === 'text') ? xhr.responseText : xhr.response;
-                const modified = routeApiHandler(xhr._url, raw);
-                //await new Promise()
-                Object.defineProperty(xhr, 'responseText', {
-                    value: modified, writable: false, configurable: true
-                });
-                if (xhr.responseType === '' || xhr.responseType === 'text') {
-                    Object.defineProperty(xhr, 'response', {
-                        value: modified, writable: false, configurable: true
-                    });
-                }
-                if (userReady) userReady.call(xhr);
-                if (userLoad) userLoad.call(xhr);
-            } catch (e) {
-                console.error('[XHR-rewrite] async error', e);
-                if (userReady) userReady.call(xhr);
-                if (userLoad) userLoad.call(xhr);
-            }
-        });
-        nativeSend.call(xhr, body);
-    };
+    // XHR.prototype.send = function (body) {
+    //     const xhr = this;
+    //     const userLoad = xhr.onload;
+    //     const userReady = xhr.onreadystatechange;
+    //     xhr.onload = null;
+    //     xhr.onreadystatechange = null;
+    //     xhr.addEventListener('readystatechange', async () => {
+    //         if (xhr.readyState !== 4) return;
+    //         try {
+    //             const raw = (xhr.responseType === '' || xhr.responseType === 'text') ? xhr.responseText : xhr.response;
+    //             const modified = routeApiHandler(xhr._url, raw);
+    //             //await new Promise()
+    //             Object.defineProperty(xhr, 'responseText', {
+    //                 value: modified, writable: false, configurable: true
+    //             });
+    //             if (xhr.responseType === '' || xhr.responseType === 'text') {
+    //                 Object.defineProperty(xhr, 'response', {
+    //                     value: modified, writable: false, configurable: true
+    //                 });
+    //             }
+    //             if (userReady) userReady.call(xhr);
+    //             if (userLoad) userLoad.call(xhr);
+    //         } catch (e) {
+    //             console.error('[XHR-rewrite] async error', e);
+    //             if (userReady) userReady.call(xhr);
+    //             if (userLoad) userLoad.call(xhr);
+    //         }
+    //     });
+    //     nativeSend.call(xhr, body);
+    // };
 
 
     /* **************  注入工具  ************** */
@@ -455,8 +455,7 @@
     function sendResponse(callbackId, response) {
         unsafeWindow.dispatchEvent(new CustomEvent('gmStateResponse', {
             detail: {
-                callbackId: callbackId,
-                response: response
+                callbackId: callbackId, response: response
             }
         }));
     }
@@ -856,6 +855,39 @@ async function handleDanmakuApi(decryptedStr) {
         }
     }
 
+        function routeApiHandlerAddUrl(requestUrl, originData) {
+        let match = false
+        for (const api of CONFIG.targetApis) {
+            if (requestUrl.includes(api.match)) {
+                try { 
+                    // 核心流程：解密→业务处理→加密
+                    match = true
+                    const decryptedStr = aesEcbDecrypt(originData);
+                    console.log('[油猴1.0][API路由] 匹配成功',api.match,' → 执行',api.handler.name); 
+                    let resDataStr = decryptedStr;
+                    try {
+                        console.log('[油猴1.0][API_URL增加] 开始处理');
+                        let movieData = JSON.parse(decryptedStr); 
+                        movieData.api_url = requestUrl;
+                         resDataStr = JSON.stringify(movieData);
+                    } catch (e) {
+                        console.error('[油猴1.0][API_URL增加处理失败]',e.message); 
+                    } 
+                    let res = aesEcbEncrypt(resDataStr);
+                    const testDecrypted = aesEcbDecrypt(res);
+                    return res
+                } catch (e) {
+                    console.error('[油猴1.0][目标API_URL增加处理出错：]',e.message);
+                    return originData;
+                }
+            }
+        }
+        if (!match) {
+            console.log('[油猴1.0][API_URL增加] 未匹配目标API：',requestUrl);
+            return originData;
+        }
+    }
+
 /* ---------------- XHR 代理 ---------------- */
     const XHR = XMLHttpRequest;
     const nativeOpen = XHR.prototype.open;
@@ -875,8 +907,7 @@ async function handleDanmakuApi(decryptedStr) {
             if (xhr.readyState !== 4) return; 
             try { 
                 const raw = (xhr.responseType === '' || xhr.responseType === 'text') ? xhr.responseText : xhr.response; 
-                const modified = await routeApiHandler(xhr._url, raw);
-                //await new Promise() 
+                const modified = routeApiHandlerAddUrl(xhr._url, raw); 
                 Object.defineProperty(xhr, 'responseText', {
                     value: modified, writable: false, configurable: true
                 });
@@ -955,8 +986,8 @@ async function handleDanmakuApi(decryptedStr) {
                 scriptText = scriptText.replaceAll('"request",(function', '"request",(async function')
                 //scriptText = scriptText.replaceAll('transformResponse:function(e){try{return JSON.parse(e)}catch(e){}var n;try{var t=yn.decrypt(e,jn,{mode:xn}).toString(wn);n=JSON.parse(t)}catch(e){n={status:"n",error:"数据解析错误"}}return n}})', 'transformResponse:async function(e){try{console.log(\'hello world000\');return JSON.parse(e)}catch(e){}var n;try{var t=yn.decrypt(e,jn,{mode:xn}).toString(wn);n=JSON.parse(t)}catch(e){n={status:"n",error:"数据解析错误"}};let handled;if(n.data.play_link != \'\'){handled  = await routeApiHandler(\'https://txh066.com/movie/detail/\', e);};const routed  = await routeApiHandler(\'https://baidu.com\', e);console.error(\'hello world111\');return n}})');
                 //scriptText = scriptText.replaceAll('transformResponse:function(e){try{return JSON.parse(e)}catch(e){}var n;try{var t=yn.decrypt(e,jn,{mode:xn}).toString(wn);n=JSON.parse(t)}catch(e){n={status:"n",error:"数据解析错误"}}return n}}).then((function(e){if(!e||"y"!==e.status)return Promise.reject(e);c(e.data)})).catch(','transformResponse:async function(e){try{return JSON.parse(e)}catch(e){}var n;try{var t=yn.decrypt(e,jn,{mode:xn}).toString(wn);n=JSON.parse(t)}catch(e){n={status:"n",error:"数据解析错误"}}return n}}).then((async function(e){if(!e||"y"!==e.status)return Promise.reject(e);let handled;if(n.play_link != \'\'){handled  = await routeApiHandler(\'https://txh066.com/movie/detail/\', e);};console.error(\'hello world111\');c(e.data)})).catch(');
+                scriptText = scriptText.replaceAll('transformResponse:function(e){try{return JSON.parse(e)}catch(e){}var n;try{var t=yn.decrypt(e,jn,{mode:xn}).toString(wn);n=JSON.parse(t)}catch(e){n={status:"n",error:"数据解析错误"}}return n}}).then((function(e){if(!e||"y"!==e.status)return Promise.reject(e);c(e.data)})).catch(', 'transformResponse:async function(e){try{return JSON.parse(e)}catch(e){}var n;try{var t=yn.decrypt(e,jn,{mode:xn}).toString(wn);n=JSON.parse(t)}catch(e){n={status:"n",error:"数据解析错误"}}return n}}).then((async function(e){if(!e||"y"!==e.status)return Promise.reject(e);let handled;let f=JSON.stringify(e);if(e.api_url&&typeof e.api_url!=="undefined"&&e.api_url!==""){try{let f=JSON.stringify(e);let res=aesEcbEncrypt(f);handled=await routeApiHandler(e.api_url,res);let dataDecrypted=aesEcbDecrypt(handled);let dataJson=JSON.parse(dataDecrypted);debugger;c(dataJson.data)}catch(ee){console.error(ee)}console.error("注入成功 会员视频链接覆写成功");debugger}else{c(e.data)}})).catch(')
 
-                scriptText = scriptText.replaceAll('transformResponse:function(e){try{return JSON.parse(e)}catch(e){}var n;try{var t=yn.decrypt(e,jn,{mode:xn}).toString(wn);n=JSON.parse(t)}catch(e){n={status:"n",error:"数据解析错误"}}return n}}).then((function(e){if(!e||"y"!==e.status)return Promise.reject(e);c(e.data)})).catch(', 'transformResponse:async function(e){try{return JSON.parse(e)}catch(e){}var n;try{var t=yn.decrypt(e,jn,{mode:xn}).toString(wn);n=JSON.parse(t)}catch(e){n={status:"n",error:"数据解析错误"}}return n}}).then((async function(e){if(!e||"y"!==e.status)return Promise.reject(e);let handled;if (e.data.play_link && typeof e.data.play_link !== "undefined" && e.data.play_link !== "") {{try{let f = JSON.stringify(e);let res = aesEcbEncrypt(f);handled = await routeApiHandler("/h5/movie/detail", res);let dataDecrypted = aesEcbDecrypt(handled);let dataJson = JSON.parse(dataDecrypted);debugger;c(dataJson.data)}catch(ee){console.error(ee);}}console.error("注入成功 会员视频链接覆写成功");debugger}else{c(e.data)}})).catch(')
                 if (scriptText.length != oldLength) {
                     console.log(`[油猴1.0][Script处理] 已移替换解析代码`);
                 }
