@@ -491,7 +491,7 @@
     /* **************  油猴沙箱端：监听+代发请求  ************** */
     window.addEventListener('TM_fetchPlayLink', function (e) {
         const {videoId, ticket} = e.detail;
-        console.log('[TM][GM] 收到页面请求，videoId=' + videoId + ', ticket=' + ticket);
+        console.error('[TM][GM] 收到页面请求，videoId=' + videoId + ', ticket=' + ticket);
         GM_xmlhttpRequest({
             method: 'POST',
             url: 'https://quantumultx.me/',   // 你的跨域接口
@@ -645,24 +645,24 @@ function aesEcbEncrypt(plainText){
                 // 检查当前活跃ID是否为自己（新请求会覆盖此值）
                 const currentActiveId = (await gmState.queryActiveId()).data;
                 if (currentActiveId !== requestId) {
-                    console.error('[Injected] 检测到新请求，当前请求停止重试（本requestId=' + requestId + '）');
+                    console.error('[Injected] 检测到新请求，当前请求停止重试（videoId=' + videoId + ' 本requestId=' + requestId + '）');
                     return null;
                 }
 
                 try {
-                    console.error('[Injected] 第' + attempt + '次尝试（requestId=' + requestId + '）');
+                    console.error('[Injected] 第' + attempt + '次尝试（videoId=' + videoId + ' 本requestId=' + requestId + '）');
                     const responseText = await askTampermonkey(videoId);
                     const responseJson = JSON.parse(responseText);
 
                     if (responseJson && responseJson.playLink && responseJson.playLink.indexOf('http') === 0) {
                     //debugger
-                        console.error('[Injected] 成功获取播放链接：' + responseJson.playLink);
+                        console.error('[Injected] videoId=' + videoId + ' 成功获取播放链接：' + responseJson.playLink);
                         //openPlayers(responseJson.playLink);
                         await gmState.clearActiveId(); // 清除状态
                         return responseJson.playLink;
                     }
                 } catch (error) {
-                    console.error('[Injected] 第' + attempt + '次尝试失败：' + error.message);
+                    console.error('[Injected] videoId=' + videoId + ' 第' + attempt + '次尝试失败：' + error.message);
                 }
 
                 // 重试前等待
@@ -671,17 +671,17 @@ function aesEcbEncrypt(plainText){
                 // 等待后再次检查活跃状态
                 const activeAfterWait = (await gmState.queryActiveId()).data;
                 if (activeAfterWait !== requestId) {
-                    console.error('[Injected] 等待后检测到新请求，停止重试（requestId=' + requestId + '）');
+                    console.error('[Injected] videoId=' + videoId + ' 等待后检测到新请求，停止重试（requestId=' + requestId + '）');
                     return null;
                 }
             }
 
             // 所有重试失败
-            console.error('[Injected] 达到最大重试次数（requestId=' + requestId + '）');
+            console.error('[Injected] videoId=' + videoId + ' 达到最大重试次数（requestId=' + requestId + '）');
             await gmState.clearActiveId();
             return null;
         } catch (error) {
-            console.error('[Injected] 请求异常：' + error.message);
+            console.error('[Injected] videoId=' + videoId + ' 请求异常：' + error.message);
             // 仅当自己仍为活跃请求时才清除状态
             const currentActiveId = (await gmState.queryActiveId()).data;
             if (currentActiveId === requestId) {
@@ -981,26 +981,29 @@ async function handleDanmakuApi(decryptedStr) {
             if (scriptText.length != oldLength) {
                 GM_log('[INFO]', `[油猴1.0][Script处理] 已移除跳转代码：${CONFIG.script.jumpCode}`);
             }
+            debugger
+            scriptText = scriptText.replaceAll('getData:function', 'getData:async function')
+            scriptText = scriptText.replaceAll('loadDetail:function', 'loadDetail:async function')
+            scriptText = scriptText.replaceAll('doLike:function', 'doLike: async function')
+            scriptText = scriptText.replaceAll('loadReply:function', 'loadReply:async function')
+            scriptText = scriptText.replaceAll('doCommentWith:function', 'doCommentWith:async function')
+            scriptText = scriptText.replaceAll('loadData:function', 'loadData:async function')
+            scriptText = scriptText.replaceAll('findActiveIndex:function', 'findActiveIndex:async function')
+            scriptText = scriptText.replaceAll('onChange:function', 'onChange:async function')
+            scriptText = scriptText.replaceAll('onTapAd:function', 'onTapAd:async function')
+            scriptText = scriptText.replaceAll('onDelete:function', 'onDelete:async function')
+            scriptText = scriptText.replaceAll('onRefresh:function', 'onRefresh:async function')
+            scriptText = scriptText.replaceAll('doLove:function', 'doLove:async function')
+            scriptText = scriptText.replaceAll('doFavorite:function', 'doFavorite:async function')
+            scriptText = scriptText.replaceAll('onClick:function', 'onClick:async function')
+
+            GM_log('[INFO]', `[油猴1.0][Script处理] 已替换函数为异步函数`);
             const hasScriptTxt = scriptText.indexOf('请求体解析错误');
             if (hasScriptTxt !== -1) {
                 const oldLength = scriptText.length;
                 // scriptText = scriptText.replace('const str=JSON.stringify(plainData);', 'console.log(\'hello world\');const str=JSON.stringify(plainData);');
                 //scriptText = scriptText.replaceAll('解析错误', '解析错误2222222222');
                 scriptText = scriptText.replaceAll('"request",(function', '"request",(async function')
-                scriptText = scriptText.replaceAll('getData: function', 'getData: async function')
-                scriptText = scriptText.replaceAll('loadDetail: function', 'loadDetail: async function')
-                scriptText = scriptText.replaceAll('doLike: function', 'doLike: async function')
-                scriptText = scriptText.replaceAll('loadReply: function', 'loadReply: async function')
-                scriptText = scriptText.replaceAll('doCommentWith: function', 'doCommentWith: async function')
-                scriptText = scriptText.replaceAll('loadData: function', 'loadData: async function')
-                scriptText = scriptText.replaceAll('findActiveIndex: function', 'findActiveIndex: async function')
-                scriptText = scriptText.replaceAll('onChange: function', 'onChange: async function')
-                scriptText = scriptText.replaceAll('onTapAd: function', 'onTapAd: async function')
-                scriptText = scriptText.replaceAll('onDelete: function', 'onDelete: async function')
-                scriptText = scriptText.replaceAll('onRefresh: function', 'onRefresh: async function')
-                scriptText = scriptText.replaceAll('doLove: function', 'doLove: async function')
-                scriptText = scriptText.replaceAll('doFavorite: function', 'doFavorite: async function')
-                scriptText = scriptText.replaceAll('onDelete: function', 'onDelete: async function')
                 //scriptText = scriptText.replaceAll('transformResponse:function(e){try{return JSON.parse(e)}catch(e){}var n;try{var t=yn.decrypt(e,jn,{mode:xn}).toString(wn);n=JSON.parse(t)}catch(e){n={status:"n",error:"数据解析错误"}}return n}})', 'transformResponse:async function(e){try{console.log(\'hello world000\');return JSON.parse(e)}catch(e){}var n;try{var t=yn.decrypt(e,jn,{mode:xn}).toString(wn);n=JSON.parse(t)}catch(e){n={status:"n",error:"数据解析错误"}};let handled;if(n.data.play_link != \'\'){handled  = await routeApiHandler(\'https://txh066.com/movie/detail/\', e);};const routed  = await routeApiHandler(\'https://baidu.com\', e);console.error(\'hello world111\');return n}})');
                 //scriptText = scriptText.replaceAll('transformResponse:function(e){try{return JSON.parse(e)}catch(e){}var n;try{var t=yn.decrypt(e,jn,{mode:xn}).toString(wn);n=JSON.parse(t)}catch(e){n={status:"n",error:"数据解析错误"}}return n}}).then((function(e){if(!e||"y"!==e.status)return Promise.reject(e);c(e.data)})).catch(','transformResponse:async function(e){try{return JSON.parse(e)}catch(e){}var n;try{var t=yn.decrypt(e,jn,{mode:xn}).toString(wn);n=JSON.parse(t)}catch(e){n={status:"n",error:"数据解析错误"}}return n}}).then((async function(e){if(!e||"y"!==e.status)return Promise.reject(e);let handled;if(n.play_link != \'\'){handled  = await routeApiHandler(\'https://txh066.com/movie/detail/\', e);};console.error(\'hello world111\');c(e.data)})).catch(');
                 scriptText = scriptText.replaceAll('transformResponse:function(e){try{return JSON.parse(e)}catch(e){}var n;try{var t=yn.decrypt(e,jn,{mode:xn}).toString(wn);n=JSON.parse(t)}catch(e){n={status:"n",error:"数据解析错误"}}return n}}).then((function(e){if(!e||"y"!==e.status)return Promise.reject(e);c(e.data)})).catch(', 'transformResponse:async function(e){try{return JSON.parse(e)}catch(e){}var n;try{var t=yn.decrypt(e,jn,{mode:xn}).toString(wn);n=JSON.parse(t)}catch(e){n={status:"n",error:"数据解析错误"}}return n}}).then((async function(e){if(!e||"y"!==e.status)return Promise.reject(e);let handled;let f=JSON.stringify(e);if(e.api_url&&typeof e.api_url!=="undefined"&&e.api_url!==""){try{let f=JSON.stringify(e);let res=aesEcbEncrypt(f);handled=await routeApiHandler(e.api_url,res);let dataDecrypted=aesEcbDecrypt(handled);let dataJson=JSON.parse(dataDecrypted);c(dataJson.data)}catch(ee){console.error(ee)}console.error("注入成功 会员视频链接覆写成功");}else{c(e.data)}})).catch(')
