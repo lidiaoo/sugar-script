@@ -500,19 +500,19 @@
             headers: {'Content-Type': 'application/json'},
             timeout: 2000,
             onload: function (res) {
-                GM_log('[ERROR]', '[TM][GM] 请求成功，状态=' + res.status + ', 长度=' + res.responseText.length + '响应' + res.responseText);
+                GM_log('[ERROR]', '[TM][GM] videoId' + videoId + ' 请求成功，状态=' + res.status + ', 长度=' + res.responseText.length + '响应' + res.responseText);
                 window.dispatchEvent(new CustomEvent('TM_playLinkResult', {
                     detail: {ticket: ticket, ok: true, text: res.responseText}
                 }));
             },
             onerror: function (err) {
-                GM_log('[ERROR]', '[TM][GM] 请求失败', err);
+                GM_log('[ERROR]', '[TM][GM] videoId' + videoId + ' 请求失败', err);
                 window.dispatchEvent(new CustomEvent('TM_playLinkResult', {
                     detail: {ticket: ticket, ok: false}
                 }));
             },
             ontimeout: function () {
-                GM_log('[ERROR]', '[TM][GM] 请求超时');
+                GM_log('[ERROR]', '[TM][GM] videoId' + videoId + ' 请求超时');
                 window.dispatchEvent(new CustomEvent('TM_playLinkResult', {
                     detail: {ticket: ticket, ok: false}
                 }));
@@ -981,21 +981,21 @@ async function handleDanmakuApi(decryptedStr) {
             if (scriptText.length != oldLength) {
                 GM_log('[INFO]', `[油猴1.0][Script处理] 已移除跳转代码：${CONFIG.script.jumpCode}`);
             }
-            debugger
-            scriptText = scriptText.replaceAll('getData:function', 'getData:async function')
-            scriptText = scriptText.replaceAll('loadDetail:function', 'loadDetail:async function')
-            scriptText = scriptText.replaceAll('doLike:function', 'doLike: async function')
-            scriptText = scriptText.replaceAll('loadReply:function', 'loadReply:async function')
-            scriptText = scriptText.replaceAll('doCommentWith:function', 'doCommentWith:async function')
-            scriptText = scriptText.replaceAll('loadData:function', 'loadData:async function')
-            scriptText = scriptText.replaceAll('findActiveIndex:function', 'findActiveIndex:async function')
-            scriptText = scriptText.replaceAll('onChange:function', 'onChange:async function')
-            scriptText = scriptText.replaceAll('onTapAd:function', 'onTapAd:async function')
-            scriptText = scriptText.replaceAll('onDelete:function', 'onDelete:async function')
-            scriptText = scriptText.replaceAll('onRefresh:function', 'onRefresh:async function')
-            scriptText = scriptText.replaceAll('doLove:function', 'doLove:async function')
-            scriptText = scriptText.replaceAll('doFavorite:function', 'doFavorite:async function')
-            scriptText = scriptText.replaceAll('onClick:function', 'onClick:async function')
+            // debugger
+            // scriptText = scriptText.replaceAll('getData:function', 'getData:async function')
+            // scriptText = scriptText.replaceAll('loadDetail:function', 'loadDetail:async function')
+            // scriptText = scriptText.replaceAll('doLike:function', 'doLike: async function')
+            // scriptText = scriptText.replaceAll('loadReply:function', 'loadReply:async function')
+            // scriptText = scriptText.replaceAll('doCommentWith:function', 'doCommentWith:async function')
+            // scriptText = scriptText.replaceAll('loadData:function', 'loadData:async function')
+            // scriptText = scriptText.replaceAll('findActiveIndex:function', 'findActiveIndex:async function')
+            // scriptText = scriptText.replaceAll('onChange:function', 'onChange:async function')
+            // scriptText = scriptText.replaceAll('onTapAd:function', 'onTapAd:async function')
+            // scriptText = scriptText.replaceAll('onDelete:function', 'onDelete:async function')
+            // scriptText = scriptText.replaceAll('onRefresh:function', 'onRefresh:async function')
+            // scriptText = scriptText.replaceAll('doLove:function', 'doLove:async function')
+            // scriptText = scriptText.replaceAll('doFavorite:function', 'doFavorite:async function')
+            // scriptText = scriptText.replaceAll('onClick:function', 'onClick:async function')
 
             GM_log('[INFO]', `[油猴1.0][Script处理] 已替换函数为异步函数`);
             const hasScriptTxt = scriptText.indexOf('请求体解析错误');
