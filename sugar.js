@@ -288,6 +288,7 @@
                 }
             }
 
+            movieData.data.name = '[油猴]___' + movieData.data.name;
             movieData.data.ad = [];
             movieData.data.ads = [];
             movieData.data.ad_apps = [];
@@ -300,24 +301,27 @@
             movieData.data.play_ad_show_time = 0;
 
             const videoId = movieData?.data?.id;
-            if (videoId) {
-                // const playLink = getPlayLink(videoId);
-                // const playLink = '';
-                // if (playLink) {
-                //     const startStr = "/h5/m3u8/link";
-                //     const startIndex = playLink.indexOf(startStr);
-                //     if (startIndex !== -1) {
-                //         // 从startStr开始截取到结尾（包含后续所有内容）
-                //         const subLink = playLink.slice(startIndex);
-                //         GM_log('[INFO]',subLink);
-                //         // 输出: /h5/m3u8/link/567c5935bd1de50452f0d601a6ef634b.m3u8
-                //         movieData.data.backup_link = subLink;
-                //         movieData.data.play_link = subLink;
-                //     }
-                // }
-            }
-            movieData.data.backup_link = 'https://';
-            movieData.data.play_link = 'https://';
+            let origin_play_link = movieData.data.play_link;
+            movieData.data.play_link = '';
+            movieData.data.backup_link = '';
+            // if (videoId) {
+            //     const playLink = getPlayLink(videoId);
+            //     if (playLink) {
+            //         const startStr = "/h5/m3u8/link";
+            //         const startIndex = playLink.indexOf(startStr);
+            //         if (startIndex !== -1) {
+            //             // 从startStr开始截取到结尾（包含后续所有内容）
+            //             const subLink = playLink.slice(startIndex);
+            //             GM_log('[INFO]',subLink);
+            //             // 输出: /h5/m3u8/link/567c5935bd1de50452f0d601a6ef634b.m3u8
+            //             movieData.data.backup_link = subLink;
+            //             movieData.data.play_link = subLink;
+            //         }
+            //     }else{
+            //         movieData.data.play_link = origin_play_link;
+            //         movieData.data.backup_link = origin_play_link;
+            //     }
+            // }
             return JSON.stringify(movieData);
         } catch (e) {
             GM_log('[ERROR]', `[油猴1.0][电影详情API处理失败] ${e.message}`);
@@ -774,6 +778,7 @@ async function handleMovieDetailApi(decryptedStr) {
         //         console.log('[油猴1.0][电影详情API] 播放线路：切换为VIP线路 → ',vipLine.link.slice(0, 50));
         //     }
         // }
+        movieData.data.name = '[油猴]___' + movieData.data.name;
         movieData.data.ad = [];
         movieData.data.ads = [];
         movieData.data.ad_apps = [];
@@ -785,6 +790,9 @@ async function handleMovieDetailApi(decryptedStr) {
         movieData.data.play_ad_auto_jump = 'y';
         movieData.data.play_ad_show_time = 0;
         const videoId = movieData?.data?.id;
+        let origin_play_link = movieData.data.play_link;
+        movieData.data.play_link = '';
+        movieData.data.backup_link = ''; 
         if (videoId) {
             const playLink = await getPlayLink(videoId);
             //const playLink = '';
@@ -799,10 +807,13 @@ async function handleMovieDetailApi(decryptedStr) {
                      movieData.data.backup_link = subLink;
                      movieData.data.play_link = subLink;
                  }
+             }else{
+                movieData.data.play_link = origin_play_link;
+                movieData.data.backup_link = origin_play_link; 
              }
         }
-        // movieData.data.backup_link = 'https://';
-        // movieData.data.play_link = 'https://';
+        // movieData.data.backup_link = '';
+        // movieData.data.play_link = '';
         return JSON.stringify(movieData);
     } catch (e) {
         console.error('[油猴1.0][电影详情API处理失败]',e.message);
